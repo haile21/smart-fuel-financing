@@ -79,6 +79,8 @@ class StationService:
         current_price_per_liter: Optional[float] = None,
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
+        phone_number: Optional[str] = None,
+        email: Optional[str] = None,
     ) -> FuelStation:
         """
         Update station information.
@@ -97,8 +99,13 @@ class StationService:
             station.latitude = latitude
         if longitude is not None:
             station.longitude = longitude
+        if phone_number is not None:
+            station.phone_number = phone_number
+        if email is not None:
+            station.email = email
         
         station.updated_at = datetime.utcnow()
+        station.last_status_update = datetime.utcnow()
         
         self.db.commit()
         self.db.refresh(station)
@@ -111,6 +118,7 @@ class StationService:
         *,
         is_available: Optional[bool] = None,
         estimated_liters_remaining: Optional[float] = None,
+        price_per_liter: Optional[float] = None,
     ) -> FuelAvailability:
         """
         Update fuel availability for a station.
@@ -134,6 +142,7 @@ class StationService:
                 fuel_type=fuel_type,
                 is_available=is_available if is_available is not None else True,
                 estimated_liters_remaining=estimated_liters_remaining,
+                price_per_liter=price_per_liter,
             )
             self.db.add(availability)
         else:
@@ -141,8 +150,13 @@ class StationService:
                 availability.is_available = is_available
             if estimated_liters_remaining is not None:
                 availability.estimated_liters_remaining = estimated_liters_remaining
+            if price_per_liter is not None:
+                availability.price_per_liter = price_per_liter
         
         availability.last_updated = datetime.utcnow()
+        
+        # Update station's last_status_update
+        station.last_status_update = datetime.utcnow()
         
         self.db.commit()
         self.db.refresh(availability)
@@ -206,9 +220,11 @@ class StationService:
                     "fuel_type": a.fuel_type,
                     "is_available": a.is_available,
                     "estimated_liters_remaining": float(a.estimated_liters_remaining) if a.estimated_liters_remaining else None,
+                    "price_per_liter": float(a.price_per_liter) if a.price_per_liter else None,
                     "last_updated": a.last_updated.isoformat(),
                 }
                 for a in availabilities
             ],
+            "last_updated": station.last_status_update.isoformat() if station.last_status_update else station.updated_at.isoformat(),
         }
 

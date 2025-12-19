@@ -272,6 +272,7 @@ class KycDocument(Base):
 class FuelStation(Base):
     """
     Fuel stations (merchants) with location and availability info.
+    Stations can register and update their status, fuel types, and availability.
     """
 
     merchant_id: Mapped[int] = mapped_column(ForeignKey("merchant.id"), index=True)
@@ -282,32 +283,41 @@ class FuelStation(Base):
     latitude: Mapped[Optional[float]] = mapped_column(Numeric(10, 7), nullable=True)
     longitude: Mapped[Optional[float]] = mapped_column(Numeric(10, 7), nullable=True)
     
-    # Availability
-    is_open: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Contact information
+    phone_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Availability status
+    is_open: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     fuel_types_available: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # JSON array: ["PETROL", "DIESEL"]
     current_fuel_price_per_liter: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
     
-    # Operating hours (stored as JSON or separate fields)
+    # Operating hours (stored as JSON: {"monday": "06:00-22:00", "tuesday": "06:00-22:00", ...})
     operating_hours: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON string
     
+    # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_status_update: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)  # Last time status was updated
     
     merchant: Mapped["Merchant"] = relationship()
+    fuel_availabilities: Mapped[list["FuelAvailability"]] = relationship(back_populates="station")
 
 
 class FuelAvailability(Base):
     """
     Real-time fuel availability tracking per station.
+    Tracks availability, stock levels, and prices per fuel type.
     """
 
     station_id: Mapped[int] = mapped_column(ForeignKey("fuelstation.id"), index=True)
-    fuel_type: Mapped[str] = mapped_column(String(32))  # "PETROL", "DIESEL", etc.
-    is_available: Mapped[bool] = mapped_column(Boolean, default=True)
+    fuel_type: Mapped[str] = mapped_column(String(32), index=True)  # "PETROL", "DIESEL", "PREMIUM_PETROL", etc.
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     estimated_liters_remaining: Mapped[Optional[float]] = mapped_column(Numeric(18, 2), nullable=True)
-    last_updated: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    price_per_liter: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)  # Price for this specific fuel type
+    last_updated: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, index=True)
     
-    station: Mapped[FuelStation] = relationship()
+    station: Mapped[FuelStation] = relationship(back_populates="fuel_availabilities")
 
     __table_args__ = (
         UniqueConstraint("station_id", "fuel_type", name="uq_fuel_availability_station_type"),

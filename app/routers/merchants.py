@@ -5,12 +5,13 @@ Merchant API endpoints: For merchants who provide fuel services.
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from app.db.session import get_db
 from app.services.station_service import StationService
 from app.services.transaction_qr_service import TransactionQrService
 from app.core.security import require_merchant, get_current_user
+from app.schemas.station import UpdateFuelAvailabilityRequest, BulkUpdateFuelAvailabilityRequest
 from app.models.entities import User
 
 router = APIRouter()
@@ -27,6 +28,14 @@ class ConfirmFuelRequest(BaseModel):
     liters_pumped: Optional[float] = None
 
 
+class UpdateFuelTypesRequest(BaseModel):
+    fuel_types: List[str]
+
+
+class UpdateFuelTypesRequest(BaseModel):
+    fuel_types: List[str]
+
+
 @router.get("/merchants/stations")
 def get_merchant_stations(
     request: Request = None,
@@ -39,6 +48,7 @@ def get_merchant_stations(
     """
     trace_id = getattr(request.state, "trace_id", "")
     from app.models.entities import FuelStation
+    import json
     
     stations = (
         db.query(FuelStation)
@@ -56,6 +66,8 @@ def get_merchant_stations(
                 "address": s.address,
                 "is_open": s.is_open,
                 "current_price_per_liter": float(s.current_fuel_price_per_liter) if s.current_fuel_price_per_liter else None,
+                "fuel_types_available": json.loads(s.fuel_types_available) if s.fuel_types_available else [],
+                "operating_hours": json.loads(s.operating_hours) if s.operating_hours else None,
             }
             for s in stations
         ],
@@ -73,7 +85,8 @@ def update_station_status(
 ):
     """
     PUT /merchants/stations/{station_id}/status
-    Update station status (open/closed, price).
+    Merchant updates station status (open/closed, general price).
+    Stations are onboarded by agents, but merchants update their status.
     """
     trace_id = getattr(request.state, "trace_id", "")
     from app.models.entities import FuelStation
@@ -111,6 +124,192 @@ def update_station_status(
         "station_id": station.id,
         "is_open": station.is_open,
         "current_price_per_liter": float(station.current_fuel_price_per_liter) if station.current_fuel_price_per_liter else None,
+        "last_status_update": station.last_status_update.isoformat() if station.last_status_update else None,
+    }
+
+
+@router.put("/merchants/stations/{station_id}/fuel-types")
+def update_fuel_types(
+    station_id: int,
+    payload: UpdateFuelTypesRequest,
+    request: Request = None,
+    current_user: User = Depends(require_merchant),
+    db: Session = Depends(get_db),
+):
+    """
+    PUT /merchants/stations/{station_id}/fuel-types
+    Merchant updates available fuel types for their station.
+    """
+    trace_id = getattr(request.state, "trace_id", "")
+    from app.models.entities import FuelStation
+    import json
+    
+    station = db.get(FuelStation, station_id)
+    if not station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Station not found",
+        )
+    
+    if station.merchant_id != current_user.merchant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    
+    # Update fuel types
+    station.fuel_types_available = json.dumps(payload.fuel_types)
+    
+    # Create/update fuel availability records
+    service = StationService(db)
+    for fuel_type in payload.fuel_types:
+        service.update_fuel_availability(
+            station_id=station_id,
+            fuel_type=fuel_type,
+            is_available=True,  # Default to available when adding
+        )
+    
+    from datetime import datetime
+    station.updated_at = datetime.utcnow()
+    station.last_status_update = datetime.utcnow()
+    db.commit()
+    db.refresh(station)
+    
+    return {
+        "trace_id": trace_id,
+        "station_id": station.id,
+        "fuel_types": payload.fuel_types,
+        "updated_at": station.updated_at.isoformat(),
+    }
+
+
+@router.put("/merchants/stations/{station_id}/fuel-availability")
+def update_fuel_availability(
+    station_id: int,
+    payload: UpdateFuelAvailabilityRequest,
+    request: Request = None,
+    current_user: User = Depends(require_merchant),
+    db: Session = Depends(get_db),
+):
+    """
+    PUT /merchants/stations/{station_id}/fuel-availability
+    Merchant updates fuel availability for a specific fuel type.
+    Use this to mark fuel as unavailable, update stock levels, or update prices.
+    """
+    trace_id = getattr(request.state, "trace_id", "")
+    from app.models.entities import FuelStation
+    
+    station = db.get(FuelStation, station_id)
+    if not station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Station not found",
+        )
+    
+    if station.merchant_id != current_user.merchant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    
+    service = StationService(db)
+    
+    try:
+        availability = service.update_fuel_availability(
+            station_id=station_id,
+            fuel_type=payload.fuel_type,
+            is_available=payload.is_available,
+            estimated_liters_remaining=payload.estimated_liters_remaining,
+            price_per_liter=payload.price_per_liter,
+        )
+        
+        # Update general price if provided
+        if payload.price_per_liter:
+            station.current_fuel_price_per_liter = payload.price_per_liter
+            from datetime import datetime
+            station.last_status_update = datetime.utcnow()
+            db.commit()
+            db.refresh(availability)
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    
+    return {
+        "trace_id": trace_id,
+        "station_id": station_id,
+        "fuel_type": availability.fuel_type,
+        "is_available": availability.is_available,
+        "estimated_liters_remaining": float(availability.estimated_liters_remaining) if availability.estimated_liters_remaining else None,
+        "price_per_liter": float(availability.price_per_liter) if availability.price_per_liter else None,
+        "last_updated": availability.last_updated.isoformat(),
+    }
+
+
+@router.put("/merchants/stations/{station_id}/fuel-availability/bulk")
+def bulk_update_fuel_availability(
+    station_id: int,
+    payload: BulkUpdateFuelAvailabilityRequest,
+    request: Request = None,
+    current_user: User = Depends(require_merchant),
+    db: Session = Depends(get_db),
+):
+    """
+    PUT /merchants/stations/{station_id}/fuel-availability/bulk
+    Merchant updates multiple fuel types at once (bulk update).
+    Useful for end-of-day or morning stock updates.
+    """
+    trace_id = getattr(request.state, "trace_id", "")
+    from app.models.entities import FuelStation
+    
+    station = db.get(FuelStation, station_id)
+    if not station:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Station not found",
+        )
+    
+    if station.merchant_id != current_user.merchant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
+    
+    service = StationService(db)
+    results = []
+    
+    for fuel_update in payload.fuel_availabilities:
+        try:
+            availability = service.update_fuel_availability(
+                station_id=station_id,
+                fuel_type=fuel_update.fuel_type,
+                is_available=fuel_update.is_available,
+                estimated_liters_remaining=fuel_update.estimated_liters_remaining,
+                price_per_liter=fuel_update.price_per_liter,
+            )
+            results.append({
+                "fuel_type": availability.fuel_type,
+                "is_available": availability.is_available,
+                "estimated_liters_remaining": float(availability.estimated_liters_remaining) if availability.estimated_liters_remaining else None,
+                "price_per_liter": float(availability.price_per_liter) if availability.price_per_liter else None,
+            })
+        except Exception as e:
+            results.append({
+                "fuel_type": fuel_update.fuel_type,
+                "error": str(e),
+            })
+    
+    from datetime import datetime
+    station.last_status_update = datetime.utcnow()
+    db.commit()
+    
+    return {
+        "trace_id": trace_id,
+        "station_id": station_id,
+        "updated": len([r for r in results if "error" not in r]),
+        "results": results,
     }
 
 

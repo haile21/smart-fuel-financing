@@ -16,13 +16,25 @@ This document lists all API endpoints organized by domain as per your specificat
 - `POST /drivers/fuel-loans/{loan_request_id}/qr?driver_id=X` - Generate QR code for approved loan
 - `POST /drivers/fuel-loans/{loan_request_id}/otp/confirm?driver_id=X` - Confirm OTP for loan
 
-## STATION
-- `POST /stations/register` - Register new fuel station
-- `GET /stations/profile?station_id=X` - Get station profile
-- `PUT /stations/status?station_id=X` - Update station status (open/closed, price)
-- `GET /stations/nearby?latitude=X&longitude=Y&radius_km=Z&fuel_type=PETROL` - Find nearby stations
+## STATION (Public & Merchant)
+- `GET /stations/profile?station_id=X` - Get station profile (public)
+- `GET /stations/availability?station_id=X` - Get station availability (public)
+- `GET /stations/nearby?latitude=X&longitude=Y&radius_km=Z&fuel_type=PETROL&is_open_only=true` - Find nearby stations (public)
 - `POST /stations/scan-qr` - Station scans QR code and authorizes transaction
 - `POST /stations/confirm-fuel` - Station confirms fuel pumped and settles transaction
+
+## MERCHANT (Station Service Providers)
+- `GET /merchants/stations` - Get all stations for merchant (MERCHANT auth)
+- `PUT /merchants/stations/{station_id}/status` - Update station status (open/closed, price) (MERCHANT auth)
+- `PUT /merchants/stations/{station_id}/fuel-types` - Update available fuel types (MERCHANT auth)
+- `PUT /merchants/stations/{station_id}/fuel-availability` - Update fuel availability per type (MERCHANT auth)
+- `PUT /merchants/stations/{station_id}/fuel-availability/bulk` - Bulk update fuel availability (MERCHANT auth)
+- `POST /merchants/scan-qr` - Merchant scans QR code (MERCHANT auth)
+- `POST /merchants/confirm-fuel` - Merchant confirms fuel pumped (MERCHANT auth)
+
+## AGENT (Platform Employees)
+- `POST /admin/agent/onboard-station` - Agent onboards a new fuel station (AGENT auth)
+- `POST /admin/agent/onboard-driver` - Agent onboards a new driver (AGENT auth)
 
 ## LOANS & TRANSACTIONS
 - `GET /loans/{loan_id}` - Get loan details and statement
