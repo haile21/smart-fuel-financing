@@ -24,42 +24,81 @@ A comprehensive FastAPI backend for a fuel financing system that acts as a clear
 
 ### Local Development
 
+**📖 For detailed setup instructions, see [LOCAL_SETUP.md](LOCAL_SETUP.md)**
+
 1. **Clone repository**
 ```bash
 git clone <repository-url>
-cd smart-fuel-financing
+cd "smart fuel financing"
 ```
 
 2. **Create virtual environment**
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
 ```
 
 3. **Install dependencies**
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-4. **Set up environment variables**
+4. **Set up PostgreSQL database**
 ```bash
-cp .env.example .env
-# Edit .env with your database URL and secret key
+# Create database
+psql -U postgres
+CREATE DATABASE fuel_finance;
+\q
 ```
 
-5. **Run database migrations**
+5. **Configure environment variables**
 ```bash
+# Copy example file
+copy .env.example .env  # Windows
+cp .env.example .env     # macOS/Linux
+
+# Edit .env with your database URL
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/fuel_finance
+SECRET_KEY=your-secret-key-here
+```
+
+6. **Initialize Alembic (first time only)**
+```bash
+# Option 1: Use helper script
+python setup_alembic.py
+
+# Option 2: Manual setup
+alembic init alembic
+# Then update alembic/env.py to import your models
+```
+
+7. **Run database migrations**
+```bash
+# Create initial migration
+alembic revision --autogenerate -m "Initial migration"
+
+# Apply migrations
 alembic upgrade head
 ```
 
-6. **Start server**
+8. **Create super admin user**
 ```bash
-uvicorn app.main:app --reload
+python scripts/create_super_admin.py
 ```
 
-7. **Access API docs**
+9. **Start server**
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+10. **Access API docs**
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+- Health check: http://localhost:8000/health
 
 ## Deployment to Render
 

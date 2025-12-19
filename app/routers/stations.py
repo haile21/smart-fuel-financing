@@ -5,6 +5,8 @@ Stations can register and update their status, fuel types, and availability in r
 
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
 from typing import Optional, List
 import json
 
