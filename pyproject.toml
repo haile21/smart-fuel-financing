@@ -1,0 +1,23 @@
+[project]
+name = "smart-fuel-financing"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.17.2",
+    "fastapi>=0.125.0",
+    "httpx>=0.28.1",
+    "passlib[bcrypt]>=1.7.4",
+    "pillow>=12.0.0",
+    "psycopg2-binary>=2.9.11",
+    "pydantic[email]>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "python-dotenv>=1.2.1",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.21",
+    "qrcode[pil]>=8.2",
+    "sqlalchemy>=2.0.45",
+    "uvicorn[standard]>=0.38.0",
+    "bcrypt==3.2.2",
+]

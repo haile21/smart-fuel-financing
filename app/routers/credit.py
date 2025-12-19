@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.services.credit_engine_service import CreditEngineService
 from app.schemas.credit import CreditLineRead
+import uuid
 
 router = APIRouter()
 
@@ -47,7 +48,7 @@ def create_credit_line(
 
 @router.get("/available-credit")
 def get_available_credit(
-    driver_id: int,
+    driver_id: uuid.UUID,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
