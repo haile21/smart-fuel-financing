@@ -211,7 +211,6 @@ class TransactionQrService:
             funding_source_id=bank.id,
             destination_merchant_id=merchant.id,
             debtor_driver_id=driver.id,
-            debtor_agency_id=driver.agency_id,
             authorized_amount=qr_record.authorized_amount,
             settled_amount=None,
             status="AUTHORIZED",

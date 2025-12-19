@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from app.models.entities import User, OtpCode, UserRole, Driver, Agency, Bank, Merchant
+from app.models.entities import User, OtpCode, UserRole, Driver, Bank, Merchant
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -127,7 +127,6 @@ class AuthService:
         phone_number: str,
         role: UserRole,
         driver_id: Optional[int] = None,
-        agency_id: Optional[int] = None,
         bank_id: Optional[int] = None,
         merchant_id: Optional[int] = None,
     ) -> User:
@@ -151,7 +150,6 @@ class AuthService:
             phone_number=phone_number,
             role=role.value,
             driver_id=driver_id,
-            agency_id=agency_id,
             bank_id=bank_id,
             merchant_id=merchant_id,
         )
@@ -171,7 +169,6 @@ class AuthService:
         # Find or create user based on role
         user = None
         driver_id = None
-        agency_id = None
         bank_id = None
         merchant_id = None
         
@@ -179,13 +176,10 @@ class AuthService:
             driver = self.db.query(Driver).filter(Driver.phone_number == phone_number).first()
             if driver:
                 driver_id = driver.id
-        elif role == UserRole.AGENCY_ADMIN:
-            # Would need to query Agency for phone_number match (extend Agency model if needed)
-            pass
         elif role == UserRole.BANK_ADMIN:
             # Would need to query Bank for phone_number match (extend Bank model if needed)
             pass
-        elif role == UserRole.MERCHANT_ADMIN:
+        elif role == UserRole.MERCHANT_ADMIN or role == UserRole.MERCHANT:
             # Would need to query Merchant for phone_number match (extend Merchant model if needed)
             pass
         
@@ -193,7 +187,6 @@ class AuthService:
             phone_number=phone_number,
             role=role,
             driver_id=driver_id,
-            agency_id=agency_id,
             bank_id=bank_id,
             merchant_id=merchant_id,
         )

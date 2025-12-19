@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from app.models.entities import (
     Driver,
-    Agency,
     KycDocument,
     KycStatus,
     User,
@@ -27,20 +26,15 @@ class KycService:
     def upload_document(
         self,
         *,
-        driver_id: Optional[int] = None,
-        agency_id: Optional[int] = None,
+        driver_id: int,
         document_type: str,
         document_url: str,
     ) -> KycDocument:
         """
-        Upload a KYC document for driver or agency.
+        Upload a KYC document for driver.
         """
-        if not driver_id and not agency_id:
-            raise ValueError("Either driver_id or agency_id must be provided")
-        
         doc = KycDocument(
             driver_id=driver_id,
-            agency_id=agency_id,
             document_type=document_type,
             document_url=document_url,
             status=KycStatus.PENDING.value,
@@ -53,22 +47,16 @@ class KycService:
     def get_documents(
         self,
         *,
-        driver_id: Optional[int] = None,
-        agency_id: Optional[int] = None,
+        driver_id: int,
     ) -> List[KycDocument]:
         """
-        Get all KYC documents for a driver or agency.
+        Get all KYC documents for a driver.
         """
-        query = self.db.query(KycDocument)
-        
-        if driver_id:
-            query = query.filter(KycDocument.driver_id == driver_id)
-        elif agency_id:
-            query = query.filter(KycDocument.agency_id == agency_id)
-        else:
-            return []
-        
-        return query.all()
+        return (
+            self.db.query(KycDocument)
+            .filter(KycDocument.driver_id == driver_id)
+            .all()
+        )
 
     def verify_document(
         self,
@@ -100,14 +88,13 @@ class KycService:
     def get_kyc_status(
         self,
         *,
-        driver_id: Optional[int] = None,
-        agency_id: Optional[int] = None,
+        driver_id: int,
     ) -> dict:
         """
-        Get overall KYC status for a driver or agency.
+        Get overall KYC status for a driver.
         Returns status summary with document counts.
         """
-        docs = self.get_documents(driver_id=driver_id, agency_id=agency_id)
+        docs = self.get_documents(driver_id=driver_id)
         
         if not docs:
             return {

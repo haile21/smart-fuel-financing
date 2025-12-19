@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from app.db.session import get_db
-from app.models.entities import Transaction, Loan, CreditLine, Driver, Agency
+from app.models.entities import Transaction, Loan, CreditLine, Driver
 
 router = APIRouter()
 

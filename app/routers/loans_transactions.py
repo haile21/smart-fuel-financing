@@ -104,7 +104,6 @@ def initiate_transaction(
         funding_source_id=driver.preferred_bank_id,
         destination_merchant_id=station.merchant_id,
         debtor_driver_id=driver.id,
-        debtor_agency_id=driver.agency_id,
         authorized_amount=payload.authorized_amount,
         settled_amount=None,
         status="AUTHORIZED",

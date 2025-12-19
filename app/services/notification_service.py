@@ -12,7 +12,6 @@ from app.models.entities import (
     NotificationType,
     NotificationStatus,
     Driver,
-    Agency,
 )
 
 

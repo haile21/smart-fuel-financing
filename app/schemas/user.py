@@ -16,7 +16,6 @@ class CreateUserRequest(BaseModel):
     full_name: Optional[str] = None
     driver_id: Optional[int] = None
     bank_id: Optional[int] = None
-    agency_id: Optional[int] = None
     merchant_id: Optional[int] = None
 
 
@@ -29,7 +28,6 @@ class UserResponse(BaseModel):
     role: str
     driver_id: Optional[int] = None
     bank_id: Optional[int] = None
-    agency_id: Optional[int] = None
     merchant_id: Optional[int] = None
     is_active: bool
     is_verified: bool

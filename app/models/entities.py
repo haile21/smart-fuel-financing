@@ -31,17 +31,6 @@ class Bank(Base):
     credit_line_requests: Mapped[list["CreditLineRequest"]] = relationship(back_populates="bank")
 
 
-class Agency(Base):
-    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    fleet_size: Mapped[int] = mapped_column(Integer, default=0)
-    risk_score: Mapped[Optional[float]] = mapped_column(Numeric(10, 4), nullable=True)
-    average_repayment_days: Mapped[Optional[float]] = mapped_column(Numeric(10, 4), nullable=True)
-    monthly_fuel_volume: Mapped[Optional[float]] = mapped_column(Numeric(18, 4), nullable=True)
-
-    drivers: Mapped[list["Driver"]] = relationship(back_populates="agency")
-    credit_lines: Mapped[list["CreditLine"]] = relationship(back_populates="agency")
-
-
 class Driver(Base):
     """
     End customer / driver profile used by the customer app.
@@ -61,10 +50,8 @@ class Driver(Base):
     plate_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     # Relationships
-    agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), index=True, nullable=True)
     preferred_bank_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bank.id"), index=True, nullable=True)
 
-    agency: Mapped[Optional[Agency]] = relationship(back_populates="drivers")
     preferred_bank: Mapped[Optional[Bank]] = relationship()
     credit_lines: Mapped[list["CreditLine"]] = relationship(back_populates="driver")
 
@@ -84,13 +71,12 @@ class Merchant(Base):
 
 class CreditLine(Base):
     """
-    Represents credit line either for an Agency (parent) or a specific Driver (child).
+    Represents credit line for a specific Driver.
     Optimistic locking via version column.
     """
 
     bank_id: Mapped[int] = mapped_column(ForeignKey("bank.id"), index=True)
-    agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), index=True, nullable=True)
-    driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), index=True, nullable=True)
+    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), index=True, nullable=False)
 
     credit_limit: Mapped[float] = mapped_column(Numeric(18, 2))
     utilized_amount: Mapped[float] = mapped_column(Numeric(18, 2), default=0)
@@ -99,15 +85,13 @@ class CreditLine(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     bank: Mapped[Bank] = relationship(back_populates="credit_lines")
-    agency: Mapped[Optional[Agency]] = relationship(back_populates="credit_lines")
-    driver: Mapped[Optional[Driver]] = relationship(back_populates="credit_lines")
+    driver: Mapped[Driver] = relationship(back_populates="credit_lines")
 
     __table_args__ = (
         UniqueConstraint(
             "bank_id",
-            "agency_id",
             "driver_id",
-            name="uq_creditline_bank_agency_driver",
+            name="uq_creditline_bank_driver",
         ),
     )
 
@@ -122,8 +106,7 @@ class Transaction(Base):
 
     funding_source_id: Mapped[int] = mapped_column(ForeignKey("bank.id"), index=True)
     destination_merchant_id: Mapped[int] = mapped_column(ForeignKey("merchant.id"), index=True)
-    debtor_driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), index=True, nullable=True)
-    debtor_agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), index=True, nullable=True)
+    debtor_driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), index=True, nullable=False)
 
     authorized_amount: Mapped[float] = mapped_column(Numeric(18, 2))
     settled_amount: Mapped[Optional[float]] = mapped_column(Numeric(18, 2), nullable=True)
@@ -134,15 +117,13 @@ class Transaction(Base):
 
     bank: Mapped[Bank] = relationship()
     merchant: Mapped[Merchant] = relationship()
-    driver: Mapped[Optional[Driver]] = relationship()
-    agency: Mapped[Optional[Agency]] = relationship()
+    driver: Mapped[Driver] = relationship()
 
     __table_args__ = (
         UniqueConstraint("idempotency_key", name="uq_transaction_idempotency"),
         Index(
             "ix_transaction_debtor",
             "debtor_driver_id",
-            "debtor_agency_id",
         ),
     )
 
@@ -166,14 +147,13 @@ class UserRole(str, enum.Enum):
     DRIVER = "DRIVER"  # Driver/end user
     AGENT = "AGENT"  # Agent (onboards fuel stations)
     MERCHANT = "MERCHANT"  # Merchant (provides fuel services)
-    AGENCY_ADMIN = "AGENCY_ADMIN"  # Agency administrator (for future use)
     MERCHANT_ADMIN = "MERCHANT_ADMIN"  # Merchant/station administrator (legacy)
 
 
 class User(Base):
     """
     Unified user model with role-based access control.
-    Supports: SUPER_ADMIN (system owner), BANK_ADMIN, DRIVER, AGENCY_ADMIN, MERCHANT_ADMIN
+    Supports: SUPER_ADMIN (system owner), BANK_ADMIN, DRIVER, AGENT, MERCHANT, MERCHANT_ADMIN
     """
 
     # Authentication
@@ -192,7 +172,6 @@ class User(Base):
     
     # Foreign keys to specific entity types (for role-based data access)
     driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), nullable=True)
-    agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), nullable=True)
     bank_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bank.id"), nullable=True)
     merchant_id: Mapped[Optional[int]] = mapped_column(ForeignKey("merchant.id"), nullable=True)
     
@@ -208,7 +187,6 @@ class User(Base):
     
     # Relationships
     driver: Mapped[Optional[Driver]] = relationship()
-    agency: Mapped[Optional[Agency]] = relationship()
     bank: Mapped[Optional[Bank]] = relationship()
     merchant: Mapped[Optional["Merchant"]] = relationship(back_populates="users")
     created_by: Mapped[Optional["User"]] = relationship(remote_side="User.id")
@@ -246,11 +224,10 @@ class KycStatus(str, enum.Enum):
 
 class KycDocument(Base):
     """
-    KYC documents uploaded by drivers/agencies.
+    KYC documents uploaded by drivers.
     """
 
-    driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), nullable=True)
-    agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), nullable=True)
+    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), nullable=False)
     
     document_type: Mapped[str] = mapped_column(String(64))  # "NATIONAL_ID", "DRIVER_LICENSE", "VEHICLE_REGISTRATION", etc.
     document_url: Mapped[str] = mapped_column(String(512))  # S3/storage URL
@@ -262,8 +239,7 @@ class KycDocument(Base):
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     
-    driver: Mapped[Optional[Driver]] = relationship()
-    agency: Mapped[Optional[Agency]] = relationship()
+    driver: Mapped[Driver] = relationship()
     verifier: Mapped[Optional[User]] = relationship()
 
 
@@ -339,8 +315,7 @@ class Loan(Base):
     """
 
     credit_line_id: Mapped[int] = mapped_column(ForeignKey("creditline.id"), index=True)
-    driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), nullable=True)
-    agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), nullable=True)
+    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), nullable=False)
     
     principal_amount: Mapped[float] = mapped_column(Numeric(18, 2))  # Total debt
     outstanding_balance: Mapped[float] = mapped_column(Numeric(18, 2))  # Remaining to pay
@@ -353,8 +328,7 @@ class Loan(Base):
     paid_off_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
     credit_line: Mapped[CreditLine] = relationship()
-    driver: Mapped[Optional[Driver]] = relationship()
-    agency: Mapped[Optional[Agency]] = relationship()
+    driver: Mapped[Driver] = relationship()
     repayments: Mapped[list["LoanRepayment"]] = relationship(back_populates="loan")
 
 
@@ -429,8 +403,8 @@ class Notification(Base):
     Notification records for SMS, email, push, in-app notifications.
     """
 
-    recipient_type: Mapped[str] = mapped_column(String(32))  # "DRIVER", "AGENCY", "BANK", etc.
-    recipient_id: Mapped[int] = mapped_column(Integer, index=True)  # ID of driver/agency/bank
+    recipient_type: Mapped[str] = mapped_column(String(32))  # "DRIVER", "BANK", etc.
+    recipient_id: Mapped[int] = mapped_column(Integer, index=True)  # ID of driver/bank/etc.
     recipient_phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     recipient_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
@@ -466,8 +440,8 @@ class Payment(Base):
     loan_id: Mapped[Optional[int]] = mapped_column(ForeignKey("loan.id"), nullable=True)
     transaction_id: Mapped[Optional[int]] = mapped_column(ForeignKey("transaction.id"), nullable=True)
     
-    payer_id: Mapped[int] = mapped_column(Integer, index=True)  # Driver or Agency ID
-    payer_type: Mapped[str] = mapped_column(String(32))  # "DRIVER" or "AGENCY"
+    payer_id: Mapped[int] = mapped_column(Integer, index=True)  # Driver ID
+    payer_type: Mapped[str] = mapped_column(String(32), default="DRIVER")  # "DRIVER"
     
     amount: Mapped[float] = mapped_column(Numeric(18, 2))
     currency: Mapped[str] = mapped_column(String(3), default="ETB")

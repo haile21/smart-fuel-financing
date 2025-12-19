@@ -7,8 +7,7 @@ from typing import Optional, List
 
 
 class UploadDocumentRequest(BaseModel):
-    driver_id: Optional[int] = None
-    agency_id: Optional[int] = None
+    driver_id: int
     document_type: str
     document_url: str
 

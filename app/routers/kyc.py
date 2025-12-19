@@ -29,7 +29,6 @@ def upload_document(
     try:
         doc = service.upload_document(
             driver_id=payload.driver_id,
-            agency_id=payload.agency_id,
             document_type=payload.document_type,
             document_url=payload.document_url,
         )
@@ -50,15 +49,14 @@ def upload_document(
 
 @router.get("/documents", response_model=list[DocumentResponse])
 def get_documents(
-    driver_id: int = None,
-    agency_id: int = None,
+    driver_id: int,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
     trace_id = getattr(request.state, "trace_id", "")
     service = KycService(db)
     
-    docs = service.get_documents(driver_id=driver_id, agency_id=agency_id)
+    docs = service.get_documents(driver_id=driver_id)
     
     return [
         DocumentResponse(
@@ -74,15 +72,14 @@ def get_documents(
 
 @router.get("/status", response_model=KycStatusResponse)
 def get_kyc_status(
-    driver_id: int = None,
-    agency_id: int = None,
+    driver_id: int,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
     trace_id = getattr(request.state, "trace_id", "")
     service = KycService(db)
     
-    status_data = service.get_kyc_status(driver_id=driver_id, agency_id=agency_id)
+    status_data = service.get_kyc_status(driver_id=driver_id)
     
     return KycStatusResponse(**status_data)
 

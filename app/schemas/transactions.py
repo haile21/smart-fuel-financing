@@ -8,8 +8,7 @@ class AuthorizeRequest(BaseModel):
     idempotency_key: str = Field(..., description="Unique key from POS/frontend")
     bank_id: int
     merchant_id: int
-    agency_id: Optional[int] = None
-    driver_id: Optional[int] = None
+    driver_id: int
     max_amount: float = Field(..., gt=0)
 
 
@@ -36,8 +35,7 @@ class TransactionRead(BaseModel):
     id: int
     bank_id: int
     merchant_id: int
-    agency_id: Optional[int]
-    driver_id: Optional[int]
+    driver_id: int
     authorized_amount: float
     settled_amount: Optional[float]
     status: str

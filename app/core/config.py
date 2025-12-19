@@ -6,8 +6,7 @@ class Settings(BaseSettings):
     # Database - Render provides DATABASE_URL environment variable
     database_url: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/fuel_finance"
-    )
+     )
     
     # JWT Settings
     secret_key: str = os.getenv(

@@ -60,7 +60,6 @@ class LoanService:
         loan = Loan(
             credit_line_id=credit_line_id,
             driver_id=transaction.debtor_driver_id,
-            agency_id=transaction.debtor_agency_id,
             principal_amount=transaction.settled_amount,
             outstanding_balance=transaction.settled_amount,
             interest_rate=0.0,  # Can be configured per credit line
@@ -122,18 +121,15 @@ class LoanService:
         self,
         *,
         driver_id: Optional[int] = None,
-        agency_id: Optional[int] = None,
         status: Optional[str] = None,
     ) -> List[Loan]:
         """
-        Get loans for a driver or agency, optionally filtered by status.
+        Get loans for a driver, optionally filtered by status.
         """
         query = self.db.query(Loan)
         
         if driver_id:
             query = query.filter(Loan.driver_id == driver_id)
-        elif agency_id:
-            query = query.filter(Loan.agency_id == agency_id)
         
         if status:
             query = query.filter(Loan.status == status)

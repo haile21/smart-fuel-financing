@@ -8,7 +8,7 @@ from typing import Optional
 
 class RequestOtpRequest(BaseModel):
     phone_number: str
-    role: str = Field(..., description="User role: DRIVER, AGENCY_ADMIN, BANK_ADMIN, etc.")
+    role: str = Field(..., description="User role: DRIVER, BANK_ADMIN, AGENT, MERCHANT, etc.")
 
 
 class RequestOtpResponse(BaseModel):

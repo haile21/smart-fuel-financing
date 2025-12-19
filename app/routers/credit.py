@@ -15,9 +15,8 @@ router = APIRouter()
 @router.post("/credit-lines", response_model=CreditLineRead)
 def create_credit_line(
     bank_id: int,
+    driver_id: int,
     credit_limit: float,
-    agency_id: int = None,
-    driver_id: int = None,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
@@ -27,9 +26,8 @@ def create_credit_line(
     try:
         credit_line = service.create_credit_line(
             bank_id=bank_id,
-            credit_limit=credit_limit,
-            agency_id=agency_id,
             driver_id=driver_id,
+            credit_limit=credit_limit,
         )
     except ValueError as e:
         raise HTTPException(
@@ -40,7 +38,6 @@ def create_credit_line(
     return CreditLineRead(
         id=credit_line.id,
         bank_id=credit_line.bank_id,
-        agency_id=credit_line.agency_id,
         driver_id=credit_line.driver_id,
         credit_limit=float(credit_line.credit_limit),
         utilized_amount=float(credit_line.utilized_amount),
@@ -50,39 +47,30 @@ def create_credit_line(
 
 @router.get("/available-credit")
 def get_available_credit(
-    driver_id: int = None,
-    agency_id: int = None,
+    driver_id: int,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
     trace_id = getattr(request.state, "trace_id", "")
     service = CreditEngineService(db)
     
-    available = service.get_available_credit(driver_id=driver_id, agency_id=agency_id)
+    available = service.get_available_credit(driver_id=driver_id)
     
     return {"trace_id": trace_id, "available_credit": available}
 
 
 @router.get("/check-availability")
 def check_credit_availability(
-    driver_id: int = None,
-    agency_id: int = None,
-    requested_amount: float = None,
+    driver_id: int,
+    requested_amount: float,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
     trace_id = getattr(request.state, "trace_id", "")
     service = CreditEngineService(db)
     
-    if requested_amount is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="requested_amount is required",
-        )
-    
     is_available, available = service.check_credit_availability(
         driver_id=driver_id,
-        agency_id=agency_id,
         requested_amount=requested_amount,
     )
     

@@ -20,7 +20,6 @@ router = APIRouter()
 @router.get("/loans", response_model=list[LoanResponse])
 def get_loans(
     driver_id: int = None,
-    agency_id: int = None,
     status: str = None,
     request: Request = None,
     db: Session = Depends(get_db),
@@ -28,7 +27,7 @@ def get_loans(
     trace_id = getattr(request.state, "trace_id", "")
     service = LoanService(db)
     
-    loans = service.get_loans(driver_id=driver_id, agency_id=agency_id, status=status)
+    loans = service.get_loans(driver_id=driver_id, status=status)
     
     return [
         LoanResponse(

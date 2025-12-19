@@ -8,7 +8,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from app.models.entities import User, UserRole, Driver, Bank, Agency, Merchant
+from app.models.entities import User, UserRole, Driver, Bank, Merchant
 from app.core.security import get_password_hash, verify_password
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -33,7 +33,6 @@ class UserService:
         full_name: Optional[str] = None,
         driver_id: Optional[int] = None,
         bank_id: Optional[int] = None,
-        agency_id: Optional[int] = None,
         merchant_id: Optional[int] = None,
         created_by_user_id: Optional[int] = None,
     ) -> User:
@@ -89,7 +88,6 @@ class UserService:
             role=role.value,
             driver_id=driver_id,
             bank_id=bank_id,
-            agency_id=agency_id,
             merchant_id=merchant_id,
             created_by_user_id=created_by_user_id,
             is_active=True,
