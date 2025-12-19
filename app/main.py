@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
+
+from app.core.config import settings
 
 from .routers import (
     auth,
@@ -48,6 +51,19 @@ def create_app() -> FastAPI:
     def health_check():
         """Health check endpoint for Render."""
         return {"status": "healthy"}
+
+    # Configure CORS
+    # Parse CORS origins from environment variable (comma-separated list, or "*" for all)
+    cors_origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
+    cors_origins = [origin.strip() for origin in cors_origins]
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE, etc.)
+        allow_headers=["*"],  # Allows all headers
+    )
 
     @app.middleware("http")
     async def add_trace_id(request: Request, call_next):
