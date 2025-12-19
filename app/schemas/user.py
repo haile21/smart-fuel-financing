@@ -5,6 +5,7 @@ User management schemas.
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from datetime import datetime
+import uuid
 
 
 class CreateUserRequest(BaseModel):
@@ -14,21 +15,21 @@ class CreateUserRequest(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     full_name: Optional[str] = None
-    driver_id: Optional[int] = None
-    bank_id: Optional[int] = None
-    merchant_id: Optional[int] = None
+    driver_id: Optional[uuid.UUID] = None
+    bank_id: Optional[uuid.UUID] = None
+    merchant_id: Optional[uuid.UUID] = None
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     phone_number: Optional[str] = None
     email: Optional[str] = None
     username: Optional[str] = None
     full_name: Optional[str] = None
     role: str
-    driver_id: Optional[int] = None
-    bank_id: Optional[int] = None
-    merchant_id: Optional[int] = None
+    driver_id: Optional[uuid.UUID] = None
+    bank_id: Optional[uuid.UUID] = None
+    merchant_id: Optional[uuid.UUID] = None
     is_active: bool
     is_verified: bool
     created_at: str

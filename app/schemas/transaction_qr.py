@@ -5,16 +5,17 @@ Transaction & QR service schemas.
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+import uuid
 
 
 class GenerateQrRequest(BaseModel):
-    station_id: int
+    station_id: uuid.UUID
     authorized_amount: float
     expiry_minutes: int = 30
 
 
 class QrCodeResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     qr_data: str
     qr_image_url: str
     bank_account_number: str
@@ -34,7 +35,7 @@ class ScanQrRequest(BaseModel):
 
 
 class TransactionResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     idempotency_key: str
     authorized_amount: float
     settled_amount: Optional[float] = None

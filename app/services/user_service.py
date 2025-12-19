@@ -4,6 +4,7 @@ User Service: User management, role assignment, user creation.
 
 from datetime import datetime
 from typing import Optional
+import uuid
 
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -138,9 +139,9 @@ class UserService:
 
     def update_user_role(
         self,
-        user_id: int,
+        user_id: uuid.UUID,
         new_role: UserRole,
-        updated_by_user_id: int,
+        updated_by_user_id: uuid.UUID,
     ) -> User:
         """
         Update user role (only super admin can do this).
@@ -163,8 +164,8 @@ class UserService:
 
     def deactivate_user(
         self,
-        user_id: int,
-        deactivated_by_user_id: int,
+        user_id: uuid.UUID,
+        deactivated_by_user_id: uuid.UUID,
     ) -> User:
         """
         Deactivate a user account.
@@ -182,8 +183,8 @@ class UserService:
 
     def activate_user(
         self,
-        user_id: int,
-        activated_by_user_id: int,
+        user_id: uuid.UUID,
+        activated_by_user_id: uuid.UUID,
     ) -> User:
         """
         Activate a user account.
@@ -199,7 +200,7 @@ class UserService:
         self.db.refresh(user)
         return user
 
-    def get_user_by_id(self, user_id: int) -> Optional[User]:
+    def get_user_by_id(self, user_id: uuid.UUID) -> Optional[User]:
         """Get user by ID."""
         return self.db.get(User, user_id)
 
@@ -207,7 +208,7 @@ class UserService:
         """Get all users with a specific role."""
         return self.db.query(User).filter(User.role == role.value).all()
 
-    def get_bank_users(self, bank_id: int) -> list[User]:
+    def get_bank_users(self, bank_id: uuid.UUID) -> list[User]:
         """Get all users for a specific bank."""
         return (
             self.db.query(User)

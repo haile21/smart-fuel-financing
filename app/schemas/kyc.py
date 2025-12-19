@@ -4,16 +4,17 @@ KYC service schemas.
 
 from pydantic import BaseModel
 from typing import Optional, List
+import uuid
 
 
 class UploadDocumentRequest(BaseModel):
-    driver_id: int
+    driver_id: uuid.UUID
     document_type: str
     document_url: str
 
 
 class DocumentResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     document_type: str
     document_url: str
     status: str

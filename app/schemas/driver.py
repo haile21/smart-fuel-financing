@@ -1,4 +1,5 @@
 from typing import Optional
+import uuid
 
 from pydantic import BaseModel, Field
 
@@ -16,18 +17,18 @@ class DriverOnboardRequest(BaseModel):
     driver_license_number: Optional[str] = None
     plate_number: Optional[str] = None
 
-    bank_id: int = Field(..., description="Selected bank id (Coop / CBE / others)")
+    bank_id: uuid.UUID = Field(..., description="Selected bank id (Coop / CBE / others)")
     consent_data_sharing: bool = Field(..., description="eKYC consent flag")
 
 
 class DriverProfile(BaseModel):
-    id: int
+    id: uuid.UUID
     name: str
     phone_number: str
     national_id: str
     risk_category: str
     credit_limit: float
-    bank_id: int
+    bank_id: uuid.UUID
 
     class Config:
         from_attributes = True

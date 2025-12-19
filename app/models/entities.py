@@ -14,9 +14,11 @@ from sqlalchemy import (
     Index,
     Text,
     Enum as SQLEnum,
+    UUID as SQLUUID,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
+import uuid
 
 from app.db.base import Base
 
@@ -50,7 +52,7 @@ class Driver(Base):
     plate_number: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     # Relationships
-    preferred_bank_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bank.id"), index=True, nullable=True)
+    preferred_bank_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("bank.id"), index=True, nullable=True)
 
     preferred_bank: Mapped[Optional[Bank]] = relationship()
     credit_lines: Mapped[list["CreditLine"]] = relationship(back_populates="driver")
@@ -75,8 +77,8 @@ class CreditLine(Base):
     Optimistic locking via version column.
     """
 
-    bank_id: Mapped[int] = mapped_column(ForeignKey("bank.id"), index=True)
-    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), index=True, nullable=False)
+    bank_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("bank.id"), index=True)
+    driver_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), index=True, nullable=False)
 
     credit_limit: Mapped[float] = mapped_column(Numeric(18, 2))
     utilized_amount: Mapped[float] = mapped_column(Numeric(18, 2), default=0)
@@ -104,9 +106,9 @@ class Transaction(Base):
     # Two-phase: AUTH then CAPTURE
     idempotency_key: Mapped[str] = mapped_column(String(64), index=True)
 
-    funding_source_id: Mapped[int] = mapped_column(ForeignKey("bank.id"), index=True)
-    destination_merchant_id: Mapped[int] = mapped_column(ForeignKey("merchant.id"), index=True)
-    debtor_driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), index=True, nullable=False)
+    funding_source_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("bank.id"), index=True)
+    destination_merchant_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("merchant.id"), index=True)
+    debtor_driver_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), index=True, nullable=False)
 
     authorized_amount: Mapped[float] = mapped_column(Numeric(18, 2))
     settled_amount: Mapped[Optional[float]] = mapped_column(Numeric(18, 2), nullable=True)
@@ -171,16 +173,16 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(32), index=True, default="DRIVER")  # UserRole enum as string
     
     # Foreign keys to specific entity types (for role-based data access)
-    driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), nullable=True)
-    bank_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bank.id"), nullable=True)
-    merchant_id: Mapped[Optional[int]] = mapped_column(ForeignKey("merchant.id"), nullable=True)
+    driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), nullable=True)
+    bank_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("bank.id"), nullable=True)
+    merchant_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("merchant.id"), nullable=True)
     
     # Status and metadata
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # Email/phone verified
     
     # Audit fields
-    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), nullable=True)
+    created_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=datetime.utcnow)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -227,13 +229,13 @@ class KycDocument(Base):
     KYC documents uploaded by drivers.
     """
 
-    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), nullable=False)
+    driver_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), nullable=False)
     
     document_type: Mapped[str] = mapped_column(String(64))  # "NATIONAL_ID", "DRIVER_LICENSE", "VEHICLE_REGISTRATION", etc.
     document_url: Mapped[str] = mapped_column(String(512))  # S3/storage URL
     status: Mapped[str] = mapped_column(String(32), default="PENDING")  # KycStatus enum as string
     
-    verified_by: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), nullable=True)
+    verified_by: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
     verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
@@ -251,7 +253,7 @@ class FuelStation(Base):
     Stations can register and update their status, fuel types, and availability.
     """
 
-    merchant_id: Mapped[int] = mapped_column(ForeignKey("merchant.id"), index=True)
+    merchant_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("merchant.id"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     
     # Location
@@ -286,7 +288,7 @@ class FuelAvailability(Base):
     Tracks availability, stock levels, and prices per fuel type.
     """
 
-    station_id: Mapped[int] = mapped_column(ForeignKey("fuelstation.id"), index=True)
+    station_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("fuelstation.id"), index=True)
     fuel_type: Mapped[str] = mapped_column(String(32), index=True)  # "PETROL", "DIESEL", "PREMIUM_PETROL", etc.
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     estimated_liters_remaining: Mapped[Optional[float]] = mapped_column(Numeric(18, 2), nullable=True)
@@ -314,8 +316,8 @@ class Loan(Base):
     Represents a loan/debt created from fuel transactions.
     """
 
-    credit_line_id: Mapped[int] = mapped_column(ForeignKey("creditline.id"), index=True)
-    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), nullable=False)
+    credit_line_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("creditline.id"), index=True)
+    driver_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), nullable=False)
     
     principal_amount: Mapped[float] = mapped_column(Numeric(18, 2))  # Total debt
     outstanding_balance: Mapped[float] = mapped_column(Numeric(18, 2))  # Remaining to pay
@@ -337,7 +339,7 @@ class LoanRepayment(Base):
     Repayment transactions against a loan.
     """
 
-    loan_id: Mapped[int] = mapped_column(ForeignKey("loan.id"), index=True)
+    loan_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("loan.id"), index=True)
     amount: Mapped[float] = mapped_column(Numeric(18, 2))
     payment_method: Mapped[str] = mapped_column(String(32))  # "BANK_TRANSFER", "MOBILE_MONEY", etc.
     payment_reference: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -355,10 +357,10 @@ class QrCode(Base):
     Contains bank account, amount, driver phone, and bank name for station scanning.
     """
 
-    transaction_id: Mapped[Optional[int]] = mapped_column(ForeignKey("transaction.id"), nullable=True)
-    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), index=True)
-    station_id: Mapped[int] = mapped_column(ForeignKey("fuelstation.id"), index=True)
-    bank_id: Mapped[int] = mapped_column(ForeignKey("bank.id"), index=True)
+    transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("transaction.id"), nullable=True)
+    driver_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), index=True)
+    station_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("fuelstation.id"), index=True)
+    bank_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("bank.id"), index=True)
     
     qr_data: Mapped[str] = mapped_column(String(512))  # Encoded QR data (JSON with bank account, amount, phone, bank name)
     qr_image_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)  # Generated QR image URL
@@ -404,7 +406,7 @@ class Notification(Base):
     """
 
     recipient_type: Mapped[str] = mapped_column(String(32))  # "DRIVER", "BANK", etc.
-    recipient_id: Mapped[int] = mapped_column(Integer, index=True)  # ID of driver/bank/etc.
+    recipient_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), index=True)  # ID of driver/bank/etc.
     recipient_phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     recipient_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
@@ -437,10 +439,10 @@ class Payment(Base):
     Payment records for loan repayments and other transactions.
     """
 
-    loan_id: Mapped[Optional[int]] = mapped_column(ForeignKey("loan.id"), nullable=True)
-    transaction_id: Mapped[Optional[int]] = mapped_column(ForeignKey("transaction.id"), nullable=True)
+    loan_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("loan.id"), nullable=True)
+    transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("transaction.id"), nullable=True)
     
-    payer_id: Mapped[int] = mapped_column(Integer, index=True)  # Driver ID
+    payer_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), index=True)  # Driver ID
     payer_type: Mapped[str] = mapped_column(String(32), default="DRIVER")  # "DRIVER"
     
     amount: Mapped[float] = mapped_column(Numeric(18, 2))
@@ -472,8 +474,8 @@ class CreditLineRequest(Base):
     Credit line requests from drivers that banks can approve/reject via portal.
     """
 
-    driver_id: Mapped[int] = mapped_column(ForeignKey("driver.id"), index=True)
-    bank_id: Mapped[int] = mapped_column(ForeignKey("bank.id"), index=True)
+    driver_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("driver.id"), index=True)
+    bank_id: Mapped[uuid.UUID] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("bank.id"), index=True)
     
     requested_amount: Mapped[float] = mapped_column(Numeric(18, 2))  # Amount driver wants to use now
     requested_limit: Mapped[float] = mapped_column(Numeric(18, 2))  # Credit limit requested
@@ -481,17 +483,17 @@ class CreditLineRequest(Base):
     status: Mapped[str] = mapped_column(String(32), index=True, default="PENDING")  # CreditLineRequestStatus enum
     
     # Location where request was made (near fuel station)
-    station_id: Mapped[Optional[int]] = mapped_column(ForeignKey("fuelstation.id"), nullable=True)
+    station_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("fuelstation.id"), nullable=True)
     latitude: Mapped[Optional[float]] = mapped_column(Numeric(10, 7), nullable=True)
     longitude: Mapped[Optional[float]] = mapped_column(Numeric(10, 7), nullable=True)
     
     # Approval details
-    reviewed_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), nullable=True)
+    reviewed_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("user.id"), nullable=True)
     reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     rejection_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # If approved, link to created credit line
-    credit_line_id: Mapped[Optional[int]] = mapped_column(ForeignKey("creditline.id"), nullable=True)
+    credit_line_id: Mapped[Optional[uuid.UUID]] = mapped_column(SQLUUID(as_uuid=True), ForeignKey("creditline.id"), nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     

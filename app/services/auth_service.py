@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import secrets
 import hashlib
+import uuid
 
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
@@ -98,7 +99,7 @@ class AuthService:
         self.db.commit()
         return True
 
-    def create_access_token(self, user_id: int, role: str, phone_number: str) -> str:
+    def create_access_token(self, user_id: uuid.UUID, role: str, phone_number: str) -> str:
         """
         Create JWT access token for authenticated user.
         """

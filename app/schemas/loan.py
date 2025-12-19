@@ -5,10 +5,11 @@ Loan service schemas.
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+import uuid
 
 
 class LoanResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     principal_amount: float
     outstanding_balance: float
     interest_rate: float
@@ -27,7 +28,7 @@ class RepaymentRequest(BaseModel):
 
 
 class RepaymentResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     amount: float
     payment_method: str
     repaid_at: str
@@ -37,7 +38,7 @@ class RepaymentResponse(BaseModel):
 
 
 class LoanStatementResponse(BaseModel):
-    loan_id: int
+    loan_id: uuid.UUID
     principal_amount: float
     outstanding_balance: float
     interest_rate: float

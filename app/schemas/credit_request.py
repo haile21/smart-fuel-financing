@@ -5,31 +5,32 @@ Credit request schemas.
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+import uuid
 
 
 class CreateCreditRequestRequest(BaseModel):
-    bank_id: int
+    bank_id: uuid.UUID
     requested_amount: float
     requested_limit: float
-    station_id: Optional[int] = None
+    station_id: Optional[uuid.UUID] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
 
 class CreditRequestResponse(BaseModel):
-    id: int
-    driver_id: int
-    bank_id: int
+    id: uuid.UUID
+    driver_id: uuid.UUID
+    bank_id: uuid.UUID
     requested_amount: float
     requested_limit: float
     status: str
-    station_id: Optional[int] = None
+    station_id: Optional[uuid.UUID] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    reviewed_by_user_id: Optional[int] = None
+    reviewed_by_user_id: Optional[uuid.UUID] = None
     reviewed_at: Optional[str] = None
     rejection_reason: Optional[str] = None
-    credit_line_id: Optional[int] = None
+    credit_line_id: Optional[uuid.UUID] = None
     created_at: str
     
     # Driver info

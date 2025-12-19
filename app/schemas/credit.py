@@ -1,12 +1,13 @@
 from typing import Optional
+import uuid
 
 from pydantic import BaseModel, Field
 
 
 class CreditLineRead(BaseModel):
-    id: int
-    bank_id: int
-    driver_id: int
+    id: uuid.UUID
+    bank_id: uuid.UUID
+    driver_id: uuid.UUID
     credit_limit: float
     utilized_amount: float
     version: int
@@ -16,8 +17,8 @@ class CreditLineRead(BaseModel):
 
 
 class CreditLineCreate(BaseModel):
-    bank_id: int
-    driver_id: int
+    bank_id: uuid.UUID
+    driver_id: uuid.UUID
     credit_limit: float = Field(..., gt=0)
 
 

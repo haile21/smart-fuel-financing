@@ -4,6 +4,7 @@ Auth service schemas.
 
 from pydantic import BaseModel, Field
 from typing import Optional
+import uuid
 
 
 class RequestOtpRequest(BaseModel):
@@ -26,6 +27,6 @@ class VerifyOtpResponse(BaseModel):
     trace_id: str
     access_token: str
     token_type: str = "bearer"
-    user_id: int
+    user_id: uuid.UUID
     role: str
 

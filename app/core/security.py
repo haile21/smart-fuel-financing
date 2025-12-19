@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+import uuid
 
 from app.core.config import settings
 from app.models.entities import User, UserRole
@@ -67,7 +68,14 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    user_id: int = int(payload.get("sub"))
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_id = uuid.UUID(user_id_str)
     user = db.get(User, user_id)
     
     if user is None:

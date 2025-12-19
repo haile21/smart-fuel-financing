@@ -4,6 +4,7 @@ Notification service schemas.
 
 from pydantic import BaseModel
 from typing import Optional, List
+import uuid
 
 
 class SendSmsRequest(BaseModel):
@@ -18,7 +19,7 @@ class SendEmailRequest(BaseModel):
 
 
 class NotificationResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     notification_type: str
     title: str
     message: str

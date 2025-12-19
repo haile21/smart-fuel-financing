@@ -5,10 +5,11 @@ Station service schemas.
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from datetime import time
+import uuid
 
 
 class CreateStationRequest(BaseModel):
-    merchant_id: int
+    merchant_id: uuid.UUID
     name: str
     address: Optional[str] = None
     latitude: Optional[float] = None
@@ -21,9 +22,9 @@ class CreateStationRequest(BaseModel):
 
 
 class StationResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     name: str
-    merchant_id: int
+    merchant_id: uuid.UUID
     address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -75,7 +76,7 @@ class UpdateStationInfoRequest(BaseModel):
 
 
 class FuelAvailabilityResponse(BaseModel):
-    station_id: int
+    station_id: uuid.UUID
     name: str
     is_open: bool
     current_price_per_liter: Optional[float] = None

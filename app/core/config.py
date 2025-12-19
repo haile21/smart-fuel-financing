@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     
     # Render port (automatically set by Render)
     port: int = int(os.getenv("PORT", "8000"))
+
+     # IMPORTANT: Render automatically sets the PORT environment variable.
+     # Bind to 0.0.0.0 so Render can see the app
+    host: str = os.getenv("HOST", "0.0.0.0")
     
     # CORS settings
     cors_origins: str = os.getenv(

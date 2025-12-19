@@ -4,12 +4,13 @@ Payment service schemas.
 
 from pydantic import BaseModel
 from typing import Optional
+import uuid
 
 
 class InitiatePaymentRequest(BaseModel):
-    loan_id: Optional[int] = None
-    transaction_id: Optional[int] = None
-    payer_id: int
+    loan_id: Optional[uuid.UUID] = None
+    transaction_id: Optional[uuid.UUID] = None
+    payer_id: uuid.UUID
     payer_type: str
     amount: float
     payment_method: str
@@ -17,7 +18,7 @@ class InitiatePaymentRequest(BaseModel):
 
 
 class PaymentResponse(BaseModel):
-    id: int
+    id: uuid.UUID
     amount: float
     currency: str
     payment_method: str
