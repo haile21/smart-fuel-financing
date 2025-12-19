@@ -4,7 +4,7 @@ from typing import Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import Driver, Bank, CreditLine
+from app.models.entities import Driver, Bank, CreditLine, User, UserRole
 from app.services.credit_engine_service import CreditEngineService
 
 
@@ -105,6 +105,17 @@ class DriverService:
             credit_limit=limit,
             driver_id=driver.id,
         )
+        
+        # Automatically create User account for driver
+        user = User(
+            phone_number=driver.phone_number,
+            role=UserRole.DRIVER.value,
+            driver_id=driver.id,
+            is_active=True,
+            is_verified=False,  # Requires OTP verification
+        )
+        self.db.add(user)
+        self.db.commit()
 
         return driver
 

@@ -161,36 +161,61 @@ class IdempotencyKey(Base):
 # ========== Auth Service Models ==========
 
 class UserRole(str, enum.Enum):
-    DRIVER = "DRIVER"
-    AGENCY_ADMIN = "AGENCY_ADMIN"
-    BANK_ADMIN = "BANK_ADMIN"
-    MERCHANT_ADMIN = "MERCHANT_ADMIN"
-    SYSTEM_ADMIN = "SYSTEM_ADMIN"
+    SUPER_ADMIN = "SUPER_ADMIN"  # System owner
+    BANK_ADMIN = "BANK_ADMIN"  # Bank administrator
+    DRIVER = "DRIVER"  # Driver/end user
+    AGENT = "AGENT"  # Agent (onboards fuel stations)
+    MERCHANT = "MERCHANT"  # Merchant (provides fuel services)
+    AGENCY_ADMIN = "AGENCY_ADMIN"  # Agency administrator (for future use)
+    MERCHANT_ADMIN = "MERCHANT_ADMIN"  # Merchant/station administrator (legacy)
 
 
 class User(Base):
     """
-    Unified user model supporting multiple roles (Driver, Agency Admin, Bank Admin, etc.)
+    Unified user model with role-based access control.
+    Supports: SUPER_ADMIN (system owner), BANK_ADMIN, DRIVER, AGENCY_ADMIN, MERCHANT_ADMIN
     """
 
-    phone_number: Mapped[str] = mapped_column(String(32), unique=True, index=True)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    role: Mapped[str] = mapped_column(String(32), index=True)  # UserRole enum as string
+    # Authentication
+    phone_number: Mapped[Optional[str]] = mapped_column(String(32), unique=True, index=True, nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    username: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True, nullable=True)  # For admin users
     
-    # Foreign keys to specific entity types
+    # Password hash (for non-OTP authentication, e.g., admin login)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Profile
+    full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
+    # Role management
+    role: Mapped[str] = mapped_column(String(32), index=True, default="DRIVER")  # UserRole enum as string
+    
+    # Foreign keys to specific entity types (for role-based data access)
     driver_id: Mapped[Optional[int]] = mapped_column(ForeignKey("driver.id"), nullable=True)
     agency_id: Mapped[Optional[int]] = mapped_column(ForeignKey("agency.id"), nullable=True)
     bank_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bank.id"), nullable=True)
     merchant_id: Mapped[Optional[int]] = mapped_column(ForeignKey("merchant.id"), nullable=True)
     
+    # Status and metadata
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)  # Email/phone verified
+    
+    # Audit fields
+    created_by_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, onupdate=datetime.utcnow)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     
+    # Relationships
     driver: Mapped[Optional[Driver]] = relationship()
     agency: Mapped[Optional[Agency]] = relationship()
     bank: Mapped[Optional[Bank]] = relationship()
     merchant: Mapped[Optional["Merchant"]] = relationship(back_populates="users")
+    created_by: Mapped[Optional["User"]] = relationship(remote_side="User.id")
+    
+    __table_args__ = (
+        Index("ix_user_phone_email", "phone_number", "email"),
+    )
 
 
 class OtpCode(Base):

@@ -4,8 +4,11 @@ import uuid
 
 from .routers import (
     auth,
+    users,
     drivers,
     stations,
+    agents,
+    merchants,
     loans_transactions,
     credit_scoring,
     bank_integration,
@@ -26,7 +29,25 @@ from .routers import (
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Fuel Financing Backend")
+    app = FastAPI(
+        title="Fuel Financing Backend",
+        description="Backend API for Smart Fuel Financing System",
+        version="1.0.0",
+    )
+    
+    @app.get("/", tags=["health"])
+    def root():
+        """Root endpoint - health check."""
+        return {
+            "status": "healthy",
+            "service": "Fuel Financing Backend",
+            "version": "1.0.0",
+        }
+    
+    @app.get("/health", tags=["health"])
+    def health_check():
+        """Health check endpoint for Render."""
+        return {"status": "healthy"}
 
     @app.middleware("http")
     async def add_trace_id(request: Request, call_next):
@@ -49,8 +70,11 @@ def create_app() -> FastAPI:
 
     # Main API Routes (RESTful structure)
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
+    app.include_router(users.router, prefix="", tags=["users"])
     app.include_router(drivers.router, prefix="/drivers", tags=["drivers"])
     app.include_router(stations.router, prefix="/stations", tags=["stations"])
+    app.include_router(agents.router, prefix="", tags=["agents"])
+    app.include_router(merchants.router, prefix="", tags=["merchants"])
     app.include_router(loans_transactions.router, prefix="", tags=["loans-transactions"])
     app.include_router(credit_scoring.router, prefix="", tags=["credit-scoring"])
     app.include_router(bank_integration.router, prefix="", tags=["bank-integration"])

@@ -11,8 +11,10 @@ from app.db.session import get_db
 from app.services.driver_service import DriverService
 from app.services.station_service import StationService
 from app.services.loan_service import LoanService
+from app.core.security import require_super_admin, require_bank_admin, require_agent, get_current_user
 from app.schemas.driver import DriverOnboardRequest
 from app.schemas.station import CreateStationRequest
+from app.models.entities import User
 
 router = APIRouter()
 
@@ -22,6 +24,7 @@ def get_bank_loans(
     bank_id: int,
     status: Optional[str] = None,
     request: Request = None,
+    current_user: User = Depends(require_bank_admin),  # Bank admin or super admin
     db: Session = Depends(get_db),
 ):
     """
@@ -65,6 +68,7 @@ def get_bank_loans(
 @router.get("/admin/kifiya/overview")
 def get_kifiya_overview(
     request: Request = None,
+    current_user: User = Depends(require_super_admin),  # Super admin only
     db: Session = Depends(get_db),
 ):
     """
@@ -104,6 +108,7 @@ def get_kifiya_overview(
 def onboard_driver_agent(
     payload: DriverOnboardRequest,
     request: Request,
+    current_user: User = Depends(require_super_admin),  # Super admin only
     db: Session = Depends(get_db),
 ):
     """
@@ -145,6 +150,7 @@ def onboard_driver_agent(
 def onboard_station_agent(
     payload: CreateStationRequest,
     request: Request,
+    current_user: User = Depends(require_agent),  # Agent or Super admin
     db: Session = Depends(get_db),
 ):
     """
