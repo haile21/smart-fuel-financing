@@ -32,19 +32,10 @@ git clone <repository-url>
 cd "smart fuel financing"
 ```
 
-2. **Create virtual environment**
+2. **Install dependencies**
 ```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-```
-
-3. **Install dependencies**
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+# This project uses uv for dependency management
+uv sync
 ```
 
 4. **Set up PostgreSQL database**
@@ -69,30 +60,30 @@ SECRET_KEY=your-secret-key-here
 6. **Initialize Alembic (first time only)**
 ```bash
 # Option 1: Use helper script
-python setup_alembic.py
+uv run python setup_alembic.py
 
 # Option 2: Manual setup
-alembic init alembic
+uv run alembic init alembic
 # Then update alembic/env.py to import your models
 ```
 
 7. **Run database migrations**
 ```bash
 # Create initial migration
-alembic revision --autogenerate -m "Initial migration"
+uv run alembic revision --autogenerate -m "Initial migration"
 
 # Apply migrations
-alembic upgrade head
+uv run alembic upgrade head
 ```
 
 8. **Create super admin user**
 ```bash
-python scripts/create_super_admin.py
+uv run python scripts/create_super_admin.py
 ```
 
 9. **Start server**
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 10. **Access API docs**
@@ -182,10 +173,10 @@ app/
 
 ```bash
 # Run tests (when implemented)
-pytest
+uv run pytest
 
 # Run with coverage
-pytest --cov=app
+uv run pytest --cov=app
 ```
 
 ## Contributing
