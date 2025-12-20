@@ -8,14 +8,21 @@ from datetime import time
 import uuid
 
 
+class StationFuelConfig(BaseModel):
+    fuel_type: str = Field(..., description="Fuel type: PETROL, DIESEL, etc.")
+    price: float = Field(..., description="Price per liter")
+
+
 class CreateStationRequest(BaseModel):
-    merchant_id: uuid.UUID
+
     name: str
+    bank_account_number: Optional[str] = None
+    bank_routing_number: Optional[str] = None
     address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    fuel_types: Optional[List[str]] = Field(default=None, description="List of fuel types: PETROL, DIESEL, etc.")
-    current_price_per_liter: Optional[float] = None
+    fuel_types: Optional[List[StationFuelConfig]] = Field(default=None, description="List of fuel types with prices")
+    # current_price_per_liter removed in favor of per-type pricing
     operating_hours: Optional[Dict[str, str]] = Field(default=None, description="Operating hours: {'monday': '06:00-22:00', ...}")
     phone_number: Optional[str] = None
     email: Optional[str] = None
@@ -24,11 +31,13 @@ class CreateStationRequest(BaseModel):
 class StationResponse(BaseModel):
     id: uuid.UUID
     name: str
-    merchant_id: uuid.UUID
+
     address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_open: bool
+    bank_account_number: Optional[str] = None
+    bank_routing_number: Optional[str] = None
     current_price_per_liter: Optional[float] = None
     fuel_types_available: Optional[List[str]] = None
     operating_hours: Optional[Dict[str, str]] = None

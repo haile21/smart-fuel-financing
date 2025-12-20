@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.db.session import SessionLocal
 from app.services.user_service import UserService
-from app.models.entities import UserRole
+from app.models import UserRole
 
 
 def create_super_admin(

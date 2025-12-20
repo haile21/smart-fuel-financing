@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from app.models.entities import User, OtpCode, UserRole, Driver, Bank, Merchant
+from app.models import User, OtpCode, UserRole, Driver, Bank
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -129,7 +129,7 @@ class AuthService:
         role: UserRole,
         driver_id: Optional[int] = None,
         bank_id: Optional[int] = None,
-        merchant_id: Optional[int] = None,
+        station_id: Optional[int] = None,
     ) -> User:
         """
         Get existing user or create new one with specified role and entity link.
@@ -152,7 +152,7 @@ class AuthService:
             role=role.value,
             driver_id=driver_id,
             bank_id=bank_id,
-            merchant_id=merchant_id,
+            station_id=station_id,
         )
         self.db.add(user)
         self.db.commit()
@@ -171,7 +171,7 @@ class AuthService:
         user = None
         driver_id = None
         bank_id = None
-        merchant_id = None
+        station_id = None
         
         if role == UserRole.DRIVER:
             driver = self.db.query(Driver).filter(Driver.phone_number == phone_number).first()
@@ -180,16 +180,16 @@ class AuthService:
         elif role == UserRole.BANK_ADMIN:
             # Would need to query Bank for phone_number match (extend Bank model if needed)
             pass
-        elif role == UserRole.MERCHANT_ADMIN or role == UserRole.MERCHANT:
-            # Would need to query Merchant for phone_number match (extend Merchant model if needed)
-            pass
+        elif role == UserRole.STATION_ATTENDANT:
+             # Station attendants might use password login mostly, but if OTP:
+             pass
         
         user = self.get_or_create_user(
             phone_number=phone_number,
             role=role,
             driver_id=driver_id,
             bank_id=bank_id,
-            merchant_id=merchant_id,
+            station_id=station_id,
         )
         
         access_token = self.create_access_token(user.id, user.role, user.phone_number)
@@ -200,4 +200,3 @@ class AuthService:
             "user_id": user.id,
             "role": user.role,
         }
-

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from app.db.session import get_db
-from app.models.entities import Transaction, Loan, CreditLine, Driver
+from app.models import Transaction, Loan, Driver
 
 router = APIRouter()
 
@@ -59,9 +59,7 @@ def get_summary_report(
     # Get loans
     loan_query = db.query(Loan)
     if bank_id:
-        credit_lines = db.query(CreditLine).filter(CreditLine.bank_id == bank_id).all()
-        credit_line_ids = [cl.id for cl in credit_lines]
-        loan_query = loan_query.filter(Loan.credit_line_id.in_(credit_line_ids))
+        loan_query = loan_query.filter(Loan.bank_id == bank_id)
     
     loans = loan_query.all()
     total_loans = len(loans)

@@ -61,7 +61,7 @@ def initiate_transaction(
     """
     trace_id = getattr(request.state, "trace_id", "")
     from app.services.transaction_qr_service import TransactionQrService
-    from app.models.entities import Driver, FuelStation, CreditLine, Merchant
+    from app.models import Driver, FuelStation, CreditLine
     
     service = TransactionQrService(db)
     
@@ -97,12 +97,12 @@ def initiate_transaction(
         )
     
     # Create authorization transaction directly
-    from app.models.entities import Transaction
+    from app.models import Transaction
     
     transaction = Transaction(
         idempotency_key=payload.idempotency_key,
         funding_source_id=driver.preferred_bank_id,
-        destination_merchant_id=station.merchant_id,
+        station_id=station.id,
         debtor_driver_id=driver.id,
         authorized_amount=payload.authorized_amount,
         settled_amount=None,
@@ -153,7 +153,7 @@ def complete_transaction(
     # Create loan from settled transaction
     if transaction.status == "SETTLED" and transaction.settled_amount:
         from app.services.loan_service import LoanService
-        from app.models.entities import CreditLine, Driver
+        from app.models import CreditLine, Driver
         
         loan_service = LoanService(db)
         driver = db.get(Driver, transaction.debtor_driver_id)

@@ -1,0 +1,89 @@
+/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/verify_pre_auth.py:46: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  last_status_update=datetime.utcnow(),
+/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/verify_pre_auth.py:47: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  created_at=datetime.utcnow(),
+/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/verify_pre_auth.py:48: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  updated_at=datetime.utcnow()
+Traceback (most recent call last):
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.StringDataRightTruncation: value too long for type character varying(512)
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/verify_pre_auth.py", line 77, in run_verification
+    qr_record = service.generate_qr_code(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/app/services/transaction_qr_service.py", line 158, in generate_qr_code
+    self.db.commit()
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+           ^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/berhanu.tarekegn/Documents/GitHub/smart-fuel-financing/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.DataError: (psycopg2.errors.StringDataRightTruncation) value too long for type character varying(512)
+
+[SQL: INSERT INTO qrcode (transaction_id, driver_id, station_id, bank_id, qr_data, qr_image_url, signature, amount, authorized_amount, expires_at, is_used, used_at, created_at, updated_at) VALUES (%(transaction_id)s::UUID, %(driver_id)s::UUID, %(station_id)s::UUID, %(bank_id)s::UUID, %(qr_data)s, %(qr_image_url)s, %(signature)s, %(amount)s, %(authorized_amount)s, %(expires_at)s, %(is_used)s, %(used_at)s, %(created_at)s, %(updated_at)s) RETURNING qrcode.id]
+[parameters: {'transaction_id': UUID('a175292e-e467-4b60-bbd1-3614097b1be0'), 'driver_id': UUID('896b20ae-f954-4949-b581-6b4380767cab'), 'station_id': UUID('07ea16bc-7b57-4c29-acb9-8fcf69ec66f8'), 'bank_id': UUID('d5c8634c-6c34-4c9d-a0d9-4c3cabcfeec4'), 'qr_data': '{"v": 2, "tid": "a175292e-e467-4b60-bbd1-3614097b1be0", "token": "ba891c60-3bc0-4a48-b17a-3eb184255195", "amt": 1000.0, "exp": 1766198990.801847}', 'qr_image_url': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAk4AAAJOAQAAAABpIrVYAAAGUElEQVR4nO2dX44iOQzGHYO0jyDtAeYo1TeYI63mSHsDOMocoCV4HKmQV/nnpKCg4jSt7aa+30OJAuc ... (1956 characters truncated) ... SWU186/bj/iSOaFuOO+Fjb4cNtgtAqh2nDfE+ygUfeztssF0AUu2wwXYBSLXDBtsFINUOG2wXgFQ7bLBdAFLtsMF2AUi1wwbbBSDVDhtsF4BUO2ywXQBS1Mx/Oh+QKNiEN8IAAAAASUVORK5CYII=', 'signature': 'ba891c60-3bc0-4a48-b17a-3eb184255195', 'amount': 1000.0, 'authorized_amount': 1000.0, 'expires_at': datetime.datetime(2025, 12, 20, 5, 49, 50, 822040), 'is_used': False, 'used_at': None, 'created_at': datetime.datetime(2025, 12, 20, 5, 34, 50, 822053), 'updated_at': datetime.datetime(2025, 12, 20, 5, 34, 50, 822054)}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+1. Setting up test data...
+2. Generating Pre-Auth QR...
+
+ERROR: (psycopg2.errors.StringDataRightTruncation) value too long for type character varying(512)
+
+[SQL: INSERT INTO qrcode (transaction_id, driver_id, station_id, bank_id, qr_data, qr_image_url, signature, amount, authorized_amount, expires_at, is_used, used_at, created_at, updated_at) VALUES (%(transaction_id)s::UUID, %(driver_id)s::UUID, %(station_id)s::UUID, %(bank_id)s::UUID, %(qr_data)s, %(qr_image_url)s, %(signature)s, %(amount)s, %(authorized_amount)s, %(expires_at)s, %(is_used)s, %(used_at)s, %(created_at)s, %(updated_at)s) RETURNING qrcode.id]
+[parameters: {'transaction_id': UUID('a175292e-e467-4b60-bbd1-3614097b1be0'), 'driver_id': UUID('896b20ae-f954-4949-b581-6b4380767cab'), 'station_id': UUID('07ea16bc-7b57-4c29-acb9-8fcf69ec66f8'), 'bank_id': UUID('d5c8634c-6c34-4c9d-a0d9-4c3cabcfeec4'), 'qr_data': '{"v": 2, "tid": "a175292e-e467-4b60-bbd1-3614097b1be0", "token": "ba891c60-3bc0-4a48-b17a-3eb184255195", "amt": 1000.0, "exp": 1766198990.801847}', 'qr_image_url': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAk4AAAJOAQAAAABpIrVYAAAGUElEQVR4nO2dX44iOQzGHYO0jyDtAeYo1TeYI63mSHsDOMocoCV4HKmQV/nnpKCg4jSt7aa+30OJAuc ... (1956 characters truncated) ... SWU186/bj/iSOaFuOO+Fjb4cNtgtAqh2nDfE+ygUfeztssF0AUu2wwXYBSLXDBtsFINUOG2wXgFQ7bLBdAFLtsMF2AUi1wwbbBSDVDhtsF4BUO2ywXQBS1Mx/Oh+QKNiEN8IAAAAASUVORK5CYII=', 'signature': 'ba891c60-3bc0-4a48-b17a-3eb184255195', 'amount': 1000.0, 'authorized_amount': 1000.0, 'expires_at': datetime.datetime(2025, 12, 20, 5, 49, 50, 822040), 'is_used': False, 'used_at': None, 'created_at': datetime.datetime(2025, 12, 20, 5, 34, 50, 822053), 'updated_at': datetime.datetime(2025, 12, 20, 5, 34, 50, 822054)}]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+Original DB Error: value too long for type character varying(512)
+

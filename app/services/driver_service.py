@@ -4,8 +4,8 @@ from typing import Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import Driver, Bank, CreditLine, User, UserRole
-from app.services.credit_engine_service import CreditEngineService
+from app.models import Driver, Bank, User, UserRole
+
 
 
 class DriverService:
@@ -98,13 +98,8 @@ class DriverService:
         self.db.add(driver)
         self.db.flush()  # populate driver.id
 
-        # Create CreditLine for this driver with computed limit and selected bank
-        credit_engine = CreditEngineService(self.db)
-        credit_engine.create_credit_line(
-            bank_id=bank_id,
-            credit_limit=limit,
-            driver_id=driver.id,
-        )
+        # CreditLine creation removed (CreditLine deprecated)
+
         
         # Automatically create User account for driver
         user = User(

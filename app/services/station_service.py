@@ -5,13 +5,14 @@ Station/Fuel Availability Service: Manages fuel stations and real-time availabil
 from datetime import datetime
 from typing import Optional, List
 import json
+import uuid
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import (
+from app.models import (
     FuelStation,
     FuelAvailability,
-    Merchant,
+
 )
 
 
@@ -25,31 +26,38 @@ class StationService:
 
     def create_station(
         self,
-        merchant_id: int,
         name: str,
         *,
+        bank_account_number: Optional[str] = None,
+        bank_routing_number: Optional[str] = None,
         address: Optional[str] = None,
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
-        fuel_types: Optional[List[str]] = None,
-        current_price_per_liter: Optional[float] = None,
+        fuel_configs: Optional[List[dict]] = None, # List of dicts or objects with fuel_type and price
         operating_hours: Optional[dict] = None,
     ) -> FuelStation:
         """
         Create a new fuel station.
+        fuel_configs: List of objects/dicts like [{"fuel_type": "Benzene", "price": 75.0}, ...]
         """
-        merchant = self.db.get(Merchant, merchant_id)
-        if not merchant:
-            raise ValueError("Merchant not found")
         
+        # Extract fuel types string list
+        fuel_type_names = [f["fuel_type"] for f in fuel_configs] if fuel_configs else None
+        
+        # Determine base price (legacy support - take the first one or None)
+        base_price = None
+        if fuel_configs and len(fuel_configs) > 0:
+            base_price = fuel_configs[0]["price"]
+            
         station = FuelStation(
-            merchant_id=merchant_id,
             name=name,
+            bank_account_number=bank_account_number,
+            bank_routing_number=bank_routing_number,
             address=address,
             latitude=latitude,
             longitude=longitude,
-            fuel_types_available=json.dumps(fuel_types) if fuel_types else None,
-            current_fuel_price_per_liter=current_price_per_liter,
+            fuel_types_available=json.dumps(fuel_type_names) if fuel_type_names else None,
+            current_fuel_price_per_liter=base_price,
             operating_hours=json.dumps(operating_hours) if operating_hours else None,
             is_open=True,
         )
@@ -57,13 +65,18 @@ class StationService:
         self.db.commit()
         self.db.refresh(station)
         
-        # Create availability records for each fuel type
-        if fuel_types:
-            for fuel_type in fuel_types:
+        # Create availability records for each fuel type with specific price
+        if fuel_configs:
+            for config in fuel_configs:
+                # Handle both dict and object access if Pydantic model passed
+                f_type = config.get("fuel_type") if isinstance(config, dict) else config.fuel_type
+                f_price = config.get("price") if isinstance(config, dict) else config.price
+                
                 availability = FuelAvailability(
                     station_id=station.id,
-                    fuel_type=fuel_type,
+                    fuel_type=f_type,
                     is_available=True,
+                    price_per_liter=f_price
                 )
                 self.db.add(availability)
             self.db.commit()
@@ -72,7 +85,7 @@ class StationService:
 
     def update_station(
         self,
-        station_id: int,
+        station_id: uuid.UUID,
         *,
         name: Optional[str] = None,
         is_open: Optional[bool] = None,
@@ -113,7 +126,7 @@ class StationService:
 
     def update_fuel_availability(
         self,
-        station_id: int,
+        station_id: uuid.UUID,
         fuel_type: str,
         *,
         is_available: Optional[bool] = None,
@@ -195,7 +208,7 @@ class StationService:
 
     def get_station_availability(
         self,
-        station_id: int,
+        station_id: uuid.UUID,
     ) -> dict:
         """
         Get full availability information for a station.

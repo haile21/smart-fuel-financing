@@ -17,7 +17,7 @@ from app.schemas.user import (
     UpdateUserRoleRequest,
     UpdateUserRequest,
 )
-from app.models.entities import User, UserRole
+from app.models import User, UserRole
 
 router = APIRouter()
 
@@ -54,7 +54,7 @@ def create_user(
             full_name=payload.full_name,
             driver_id=payload.driver_id,
             bank_id=payload.bank_id,
-            merchant_id=payload.merchant_id,
+            station_id=payload.station_id,
             created_by_user_id=current_user.id,
         )
     except ValueError as e:
@@ -72,7 +72,7 @@ def create_user(
         role=user.role,
         driver_id=user.driver_id,
         bank_id=user.bank_id,
-        merchant_id=user.merchant_id,
+        station_id=user.station_id,
         is_active=user.is_active,
         is_verified=user.is_verified,
         created_at=user.created_at.isoformat(),
@@ -129,7 +129,7 @@ def login_user(
             role=user.role,
         driver_id=user.driver_id,
         bank_id=user.bank_id,
-        merchant_id=user.merchant_id,
+        station_id=user.station_id,
             is_active=user.is_active,
             is_verified=user.is_verified,
             created_at=user.created_at.isoformat(),
@@ -155,8 +155,7 @@ def get_current_user_info(
         role=current_user.role,
         driver_id=current_user.driver_id,
         bank_id=current_user.bank_id,
-        agency_id=current_user.agency_id,
-        merchant_id=current_user.merchant_id,
+        station_id=current_user.station_id,
         is_active=current_user.is_active,
         is_verified=current_user.is_verified,
         created_at=current_user.created_at.isoformat(),
@@ -192,7 +191,7 @@ def list_users(
         users = service.get_bank_users(bank_id)
     else:
         # Get all users (super admin only)
-        from app.models.entities import User as UserModel
+        from app.models import User as UserModel
         users = db.query(UserModel).all()
     
     return [
@@ -205,7 +204,7 @@ def list_users(
             role=user.role,
         driver_id=user.driver_id,
         bank_id=user.bank_id,
-        merchant_id=user.merchant_id,
+        station_id=user.station_id,
             is_active=user.is_active,
             is_verified=user.is_verified,
             created_at=user.created_at.isoformat(),

@@ -81,7 +81,7 @@ def pay_station(
     This is called when station scans QR code.
     """
     trace_id = getattr(request.state, "trace_id", "")
-    from app.models.entities import Transaction, Merchant, FuelStation
+    from app.models import Transaction, FuelStation
     
     transaction = db.get(Transaction, payload.transaction_id)
     if not transaction:
@@ -96,22 +96,22 @@ def pay_station(
             detail=f"Transaction is {transaction.status}, must be AUTHORIZED",
         )
     
-    merchant = db.get(Merchant, transaction.destination_merchant_id)
-    if not merchant:
+    station = db.get(FuelStation, transaction.station_id)
+    if not station:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Merchant not found",
+            detail="Station not found",
         )
     
     # In production, initiate bank transfer here:
-    # Transfer amount from bank.account_number to merchant.bank_account_number
+    # Transfer amount from bank.account_number to station.bank_account_number
     
     # For now, just mark as ready for settlement
     return {
         "trace_id": trace_id,
         "transaction_id": transaction.id,
         "amount": payload.amount,
-        "merchant_account": merchant.bank_account_number or "N/A",
+        "merchant_account": station.bank_account_number or "N/A",
         "status": "payment_initiated",
         "message": "Payment transfer initiated to merchant account",
     }
@@ -130,7 +130,7 @@ def auto_repay(
     trace_id = getattr(request.state, "trace_id", "")
     loan_service = LoanService(db)
     
-    from app.models.entities import Loan
+    from app.models import Loan
     loan = db.get(Loan, payload.loan_id)
     if not loan:
         raise HTTPException(

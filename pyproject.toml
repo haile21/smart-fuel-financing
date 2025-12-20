@@ -20,4 +20,7 @@ dependencies = [
     "sqlalchemy>=2.0.45",
     "uvicorn[standard]>=0.38.0",
     "bcrypt==3.2.2",
+    "joblib>=1.5.3",
+    "scikit-learn>=1.8.0",
+    "xgboost>=3.1.2",
 ]

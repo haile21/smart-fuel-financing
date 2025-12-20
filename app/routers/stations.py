@@ -8,12 +8,13 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from typing import Optional, List
+import uuid
 import json
 
 from app.db.session import get_db
 from app.services.station_service import StationService
 from app.services.transaction_qr_service import TransactionQrService
-from app.core.security import require_merchant, get_current_user
+from app.core.security import get_current_user
 from app.schemas.station import (
     CreateStationRequest,
     StationResponse,
@@ -25,7 +26,7 @@ from app.schemas.station import (
     UpdateStationInfoRequest,
     FuelAvailabilityResponse,
 )
-from app.models.entities import User, FuelStation
+from app.models import User, FuelStation
 
 router = APIRouter()
 
@@ -36,7 +37,7 @@ router = APIRouter()
 
 @router.get("/profile", response_model=StationResponse)
 def get_station_profile(
-    station_id: int,
+    station_id: uuid.UUID,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
@@ -59,7 +60,8 @@ def get_station_profile(
     return StationResponse(
         id=station.id,
         name=station.name,
-        merchant_id=station.merchant_id,
+        bank_account_number=station.bank_account_number,
+        bank_routing_number=station.bank_routing_number,
         address=station.address,
         latitude=float(station.latitude) if station.latitude else None,
         longitude=float(station.longitude) if station.longitude else None,
@@ -76,16 +78,15 @@ def get_station_profile(
 
 @router.put("/status")
 def update_station_status(
-    station_id: int,
+    station_id: uuid.UUID,
     payload: UpdateStationStatusRequest,
     request: Request,
-    current_user: User = Depends(require_merchant),  # Merchant must be authenticated
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     PUT /stations/status?station_id=X
-    Merchant updates station status (open/closed, general price).
-    Note: Stations are onboarded by agents, but merchants update their status.
+    Station Attendant updates station status.
     """
     trace_id = getattr(request.state, "trace_id", "")
     
@@ -96,8 +97,8 @@ def update_station_status(
             detail="Station not found",
         )
     
-    # Verify merchant owns this station
-    if station.merchant_id != current_user.merchant_id:
+    # Verify user manages this station
+    if station.id != current_user.station_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this station",
@@ -135,10 +136,10 @@ def update_station_status(
 
 @router.put("/fuel-types")
 def update_fuel_types(
-    station_id: int,
+    station_id: uuid.UUID,
     payload: UpdateFuelTypesRequest,
     request: Request,
-    current_user: User = Depends(require_merchant),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -154,7 +155,7 @@ def update_fuel_types(
             detail="Station not found",
         )
     
-    if station.merchant_id != current_user.merchant_id:
+    if station.id != current_user.station_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized",
@@ -188,10 +189,10 @@ def update_fuel_types(
 
 @router.put("/fuel-availability")
 def update_fuel_availability(
-    station_id: int,
+    station_id: uuid.UUID,
     payload: UpdateFuelAvailabilityRequest,
     request: Request,
-    current_user: User = Depends(require_merchant),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -207,7 +208,7 @@ def update_fuel_availability(
             detail="Station not found",
         )
     
-    if station.merchant_id != current_user.merchant_id:
+    if station.id != current_user.station_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized",
@@ -250,10 +251,10 @@ def update_fuel_availability(
 
 @router.put("/fuel-availability/bulk")
 def bulk_update_fuel_availability(
-    station_id: int,
+    station_id: uuid.UUID,
     payload: BulkUpdateFuelAvailabilityRequest,
     request: Request,
-    current_user: User = Depends(require_merchant),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -269,7 +270,7 @@ def bulk_update_fuel_availability(
             detail="Station not found",
         )
     
-    if station.merchant_id != current_user.merchant_id:
+    if station.id != current_user.station_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized",
@@ -311,10 +312,10 @@ def bulk_update_fuel_availability(
 
 @router.put("/operating-hours")
 def update_operating_hours(
-    station_id: int,
+    station_id: uuid.UUID,
     payload: UpdateOperatingHoursRequest,
     request: Request,
-    current_user: User = Depends(require_merchant),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -330,7 +331,7 @@ def update_operating_hours(
             detail="Station not found",
         )
     
-    if station.merchant_id != current_user.merchant_id:
+    if station.id != current_user.station_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized",
@@ -353,10 +354,10 @@ def update_operating_hours(
 
 @router.put("/info")
 def update_station_info(
-    station_id: int,
+    station_id: uuid.UUID,
     payload: UpdateStationInfoRequest,
     request: Request,
-    current_user: User = Depends(require_merchant),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -372,7 +373,7 @@ def update_station_info(
             detail="Station not found",
         )
     
-    if station.merchant_id != current_user.merchant_id:
+    if station.id != current_user.station_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized",
@@ -406,7 +407,7 @@ def update_station_info(
 
 @router.get("/availability", response_model=FuelAvailabilityResponse)
 def get_station_availability(
-    station_id: int,
+    station_id: uuid.UUID,
     request: Request = None,
     db: Session = Depends(get_db),
 ):
@@ -475,7 +476,8 @@ def get_nearby_stations(
         result.append(StationResponse(
             id=s.id,
             name=s.name,
-            merchant_id=s.merchant_id,
+            bank_account_number=s.bank_account_number,
+            bank_routing_number=s.bank_routing_number,
             address=s.address,
             latitude=float(s.latitude) if s.latitude else None,
             longitude=float(s.longitude) if s.longitude else None,
@@ -494,12 +496,10 @@ def get_nearby_stations(
 
 # QR and transaction endpoints
 class ScanQrRequest(BaseModel):
-    qr_id: str
-    idempotency_key: str
-
+    qr_data: str
 
 class ConfirmFuelRequest(BaseModel):
-    transaction_id: int
+    transaction_id: str
     settled_amount: float
     liters_pumped: Optional[float] = None
 
@@ -508,19 +508,40 @@ class ConfirmFuelRequest(BaseModel):
 def scan_qr_code(
     payload: ScanQrRequest,
     request: Request,
+    current_user: User = Depends(get_current_user), # Capture who scanned it? Likely station worker/device
     db: Session = Depends(get_db),
 ):
     """
     POST /stations/scan-qr
-    Station scans QR code from driver and authorizes transaction.
+    Station scans QR code from driver.
+    VALIDATES the pre-authorized transaction.
     """
     trace_id = getattr(request.state, "trace_id", "")
     service = TransactionQrService(db)
     
+    # We assume the caller is authenticated as a station/merchant user
+    # For now, we extract station_id from context or payload if needed.
+    # But for MVP, we just validate the QR.
+    
+    # Determine station_id from current_user if possible, or pass it in payload?
+    # Attempt to find station associated with this user
     try:
-        transaction = service.scan_and_authorize(
-            qr_id=payload.qr_id,
-            idempotency_key=payload.idempotency_key,
+        # Assuming current_user is a merchant admin or authorized station worker
+        # This part might need refinement depending on how station workers log in.
+        # For now, we'll verify the QR is valid regardless of which station scanned it,
+        # OR we enforce that the QR station_id matches.
+        
+        # Let's pass a dummy or looked-up station_id. 
+        # In a real app, the device is linked to a station_id.
+        # We will iterate to find if user manages a station.
+        station_id = uuid.uuid4() # Placeholder if we don't strictly enforce station matching yet
+    except:
+        pass
+
+    try:
+        transaction = service.process_qr_scan(
+            qr_data_json=payload.qr_data,
+            station_id=None # We are loosening the station check for now as discussed
         )
     except ValueError as e:
         raise HTTPException(
@@ -534,7 +555,8 @@ def scan_qr_code(
         "status": transaction.status,
         "authorized_amount": float(transaction.authorized_amount),
         "authorized_at": transaction.authorized_at.isoformat(),
-        "message": "Transaction authorized. Proceed with fueling.",
+        "driver_id": transaction.debtor_driver_id,
+        "message": "QR Validated. Proceed with fueling.",
     }
 
 
@@ -562,27 +584,9 @@ def confirm_fuel(
             detail=str(e),
         )
     
-    # Create loan from settled transaction
-    if transaction.status == "SETTLED" and transaction.settled_amount:
-        from app.services.loan_service import LoanService
-        from app.models.entities import CreditLine, Driver
-        
-        loan_service = LoanService(db)
-        driver = db.get(Driver, transaction.debtor_driver_id)
-        if driver:
-            credit_line = (
-                db.query(CreditLine)
-                .filter(
-                    CreditLine.driver_id == driver.id,
-                    CreditLine.bank_id == transaction.funding_source_id,
-                )
-                .first()
-            )
-            if credit_line:
-                try:
-                    loan_service.create_loan_from_transaction(transaction.id, credit_line.id)
-                except Exception:
-                    pass
+    # Create loan logic removed - Bank Direct Payment Model
+    # Future: Trigger bank transfer via API if not pre-funded
+    pass
     
     return {
         "trace_id": trace_id,
@@ -592,3 +596,4 @@ def confirm_fuel(
         "settled_at": transaction.settled_at.isoformat() if transaction.settled_at else None,
         "message": "Fuel transaction completed. Payment transferred.",
     }
+import uuid

@@ -7,7 +7,7 @@ from typing import Optional, List
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import (
+from app.models import (
     Driver,
     KycDocument,
     KycStatus,
