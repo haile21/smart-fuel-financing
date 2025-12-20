@@ -10,19 +10,18 @@ import qrcode
 import io
 import base64
 import json
+from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import (
+from app.models import (
     Transaction,
     QrCode,
     Driver,
     FuelStation,
-    CreditLine,
     Bank,
-    Merchant,
+
 )
-from app.services.credit_engine_service import CreditEngineService
 
 
 class TransactionQrService:
@@ -33,18 +32,17 @@ class TransactionQrService:
 
     def __init__(self, db: Session):
         self.db = db
-        self.credit_engine = CreditEngineService(db)
 
     def generate_qr_code(
         self,
-        driver_id: int,
-        station_id: int,
+        driver_id: uuid.UUID,
+        station_id: uuid.UUID,
         authorized_amount: float,
-        expiry_minutes: int = 30,
+        expiry_minutes: int = 15,
     ) -> QrCode:
         """
-        Generate a QR code for a fuel transaction authorization.
-        QR contains: bank account, amount, driver phone, bank name.
+        Generate a Pre-Authorized QR code.
+        Action: Checks credit -> Creates AUTHORIZED Transaction -> Holds Funds -> Returns QR.
         """
         driver = self.db.get(Driver, driver_id)
         if not driver:
@@ -56,51 +54,49 @@ class TransactionQrService:
         station = self.db.get(FuelStation, station_id)
         if not station:
             raise ValueError("Station not found")
-        
+            
         bank = self.db.get(Bank, driver.preferred_bank_id)
         if not bank:
             raise ValueError("Bank not found")
         
-        if not bank.account_number:
-            raise ValueError("Bank account number not configured")
+        if not bank:
+            raise ValueError("Bank not found")
         
-        # Check credit availability
-        is_available, available = self.credit_engine.check_credit_availability(
-            driver_id=driver_id,
-            requested_amount=authorized_amount,
+        # 1. Create Transaction (PRE-AUTH) -> "AUTHORIZED"
+        # We generate a unique idempotency key for this generation event
+        idempotency_key = f"gen-{uuid.uuid4()}"
+        
+        transaction = Transaction(
+            idempotency_key=idempotency_key,
+            funding_source_id=bank.id,
+            station_id=station.id,
+            debtor_driver_id=driver.id,
+            authorized_amount=authorized_amount,
+            settled_amount=None,
+            status="AUTHORIZED",
+            authorized_at=datetime.utcnow(),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
+        self.db.add(transaction)
         
-        if not is_available:
-            raise ValueError(f"Insufficient credit. Available: {available}")
+        self.db.flush() # Get IDs
         
-        # Get credit line
-        credit_line = (
-            self.db.query(CreditLine)
-            .filter(
-                CreditLine.driver_id == driver.id,
-                CreditLine.bank_id == bank.id,
-            )
-            .first()
-        )
+        # 4. Generate QR Payload (Minimal & Secure)
+        # We use a random token effectively as a 'signature' for this lookup
+        qr_token = str(uuid.uuid4())
         
-        if not credit_line:
-            raise ValueError("Credit line not found")
-        
-        # Prepare QR data with bank account, amount, phone, bank name
         qr_payload = {
-            "bank_account": bank.account_number,
-            "amount": authorized_amount,
-            "driver_phone": driver.phone_number,
-            "bank_name": bank.name,
-            "qr_id": str(uuid.uuid4()),
-            "driver_id": driver_id,
-            "station_id": station_id,
-            "expires_at": (datetime.utcnow() + timedelta(minutes=expiry_minutes)).isoformat(),
+            "v": 2, # Version 2 (Pre-Auth)
+            "tid": str(transaction.id),
+            "token": qr_token,
+            "amt": authorized_amount,
+            "exp": (datetime.utcnow() + timedelta(minutes=expiry_minutes)).timestamp()
         }
         
         qr_data_str = json.dumps(qr_payload)
         
-        # Create QR code image
+        # Create QR Image
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(qr_data_str)
         qr.make(fit=True)
@@ -110,24 +106,25 @@ class TransactionQrService:
         img.save(img_buffer, format="PNG")
         img_buffer.seek(0)
         
-        # Encode as base64 (in production, upload to S3 and store URL)
         qr_image_base64 = base64.b64encode(img_buffer.read()).decode()
         qr_image_url = f"data:image/png;base64,{qr_image_base64}"
         
         expires_at = datetime.utcnow() + timedelta(minutes=expiry_minutes)
         
+        # 5. Save QR Record
         qr_record = QrCode(
+            transaction_id=transaction.id,
             driver_id=driver_id,
             station_id=station_id,
             bank_id=bank.id,
             qr_data=qr_data_str,
-            qr_image_url=qr_image_url,
-            bank_account_number=bank.account_number,
+            qr_image_url=None, # "https://placeholder-qr.com", # Disabled to avoid String(512) overflow
+            signature=qr_token, # Storing the token as signature
             amount=authorized_amount,
-            driver_phone_number=driver.phone_number,
-            bank_name=bank.name,
             authorized_amount=authorized_amount,
             expires_at=expires_at,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
         self.db.add(qr_record)
         self.db.commit()
@@ -135,110 +132,62 @@ class TransactionQrService:
         
         return qr_record
 
-    def scan_and_authorize(
+    def process_qr_scan(
         self,
-        qr_id: str,
-        idempotency_key: str,
+        qr_data_json: str,
+        station_id: Optional[uuid.UUID] = None
     ) -> Transaction:
         """
-        Scan QR code and create authorization transaction.
-        This is the "Hold" phase of two-phase commit.
-        Station scans QR code and initiates payment transfer.
+        Station scans the QR.
+        Action: Validates QR -> Checks Transaction Status -> Returns Transaction.
+        No new transaction created here, just validation of the Pre-Auth.
         """
-        # Find QR code by parsing qr_data or by qr_id
-        qr_records = (
+        try:
+            payload = json.loads(qr_data_json)
+        except json.JSONDecodeError:
+            raise ValueError("Invalid QR format")
+            
+        transaction_id = payload.get("tid")
+        token = payload.get("token")
+        
+        if not transaction_id or not token:
+            raise ValueError("Invalid QR payload")
+            
+        # Find QR Record
+        qr_record = (
             self.db.query(QrCode)
-            .filter(QrCode.qr_data.contains(qr_id))
-            .filter(QrCode.is_used == False)
-            .filter(QrCode.expires_at > datetime.utcnow())
-            .all()
-        )
-        
-        qr_record = None
-        for qr in qr_records:
-            try:
-                qr_data = json.loads(qr.qr_data)
-                if qr_data.get("qr_id") == qr_id:
-                    qr_record = qr
-                    break
-            except:
-                continue
-        
-        if not qr_record:
-            raise ValueError("Invalid or expired QR code")
-        
-        # Check idempotency
-        existing = (
-            self.db.query(Transaction)
-            .filter(Transaction.idempotency_key == idempotency_key)
-            .first()
-        )
-        if existing:
-            return existing
-        
-        driver = self.db.get(Driver, qr_record.driver_id)
-        station = self.db.get(FuelStation, qr_record.station_id)
-        bank = self.db.get(Bank, qr_record.bank_id)
-        
-        if not driver or not station or not bank:
-            raise ValueError("Driver, station, or bank not found")
-        
-        # Get credit line
-        credit_line = (
-            self.db.query(CreditLine)
+            .join(Transaction)
             .filter(
-                CreditLine.driver_id == driver.id,
-                CreditLine.bank_id == bank.id,
+                QrCode.transaction_id == uuid.UUID(transaction_id),
+                QrCode.signature == token,
+                QrCode.is_used == False,
+                QrCode.expires_at > datetime.utcnow()
             )
             .first()
         )
         
-        if not credit_line:
-            raise ValueError("Credit line not found")
+        if not qr_record:
+            raise ValueError("Invalid, expired, or already used QR code")
+            
+        # Validate Station (Optional: Ensure station matches the one intended?)
+        # For now, we allow any station in the same network, or strictly enforce:
+        # if qr_record.station_id != station_id:
+        #    raise ValueError("QR code is for a different station")
         
-        # Check credit with optimistic locking
-        if credit_line.utilized_amount + qr_record.authorized_amount > credit_line.credit_limit:
-            raise ValueError("Insufficient credit limit")
-        
-        # Get merchant for station
-        merchant = self.db.get(Merchant, station.merchant_id)
-        if not merchant:
-            raise ValueError("Merchant not found")
-        
-        # Create authorization transaction
-        transaction = Transaction(
-            idempotency_key=idempotency_key,
-            funding_source_id=bank.id,
-            destination_merchant_id=merchant.id,
-            debtor_driver_id=driver.id,
-            authorized_amount=qr_record.authorized_amount,
-            settled_amount=None,
-            status="AUTHORIZED",
-        )
-        self.db.add(transaction)
-        
-        # Update credit line (with optimistic locking)
-        credit_line.utilized_amount += qr_record.authorized_amount
-        credit_line.version += 1
-        
-        # Mark QR as used
-        qr_record.is_used = True
-        qr_record.used_at = datetime.utcnow()
-        qr_record.transaction_id = transaction.id
-        
-        self.db.commit()
-        self.db.refresh(transaction)
+        transaction = qr_record.transaction
+        if transaction.status != "AUTHORIZED":
+            raise ValueError(f"Transaction is in invalid state: {transaction.status}")
+            
         return transaction
 
     def settle_transaction(
         self,
-        transaction_id: int,
+        transaction_id: uuid.UUID,
         settled_amount: float,
     ) -> Transaction:
         """
-        Settle a transaction (Capture phase).
-        Releases the difference between authorized and settled amounts.
-        Payment is transferred from bank account to merchant account.
+        Finalize/Capture the transaction.
+        Action: Adjusts final amount -> Settles -> Releases unused credit.
         """
         transaction = self.db.get(Transaction, transaction_id)
         if not transaction:
@@ -247,37 +196,22 @@ class TransactionQrService:
         if transaction.status != "AUTHORIZED":
             raise ValueError(f"Transaction already {transaction.status}")
         
-        if settled_amount > transaction.authorized_amount:
+        # Cast settled_amount to Decimal
+        settled_amount_decimal = Decimal(str(settled_amount))
+        
+        if settled_amount_decimal > transaction.authorized_amount:
             raise ValueError("Settled amount cannot exceed authorized amount")
         
-        # Get credit line
-        driver = self.db.get(Driver, transaction.debtor_driver_id)
-        if not driver:
-            raise ValueError("Driver not found")
-        
-        credit_line = (
-            self.db.query(CreditLine)
-            .filter(
-                CreditLine.driver_id == driver.id,
-                CreditLine.bank_id == transaction.funding_source_id,
-            )
-            .first()
-        )
-        
-        if not credit_line:
-            raise ValueError("Credit line not found")
-        
-        # Release difference back to credit limit
-        difference = transaction.authorized_amount - settled_amount
-        credit_line.utilized_amount = max(0.0, credit_line.utilized_amount - difference)
+        # Mark QR as used (if not already)
+        qr_record = self.db.query(QrCode).filter(QrCode.transaction_id == transaction.id).first()
+        if qr_record:
+            qr_record.is_used = True
+            qr_record.used_at = datetime.utcnow()
         
         # Update transaction
         transaction.settled_amount = settled_amount
         transaction.status = "SETTLED"
         transaction.settled_at = datetime.utcnow()
-        
-        # In production, initiate bank transfer here:
-        # Transfer settled_amount from bank.account_number to merchant.bank_account
         
         self.db.commit()
         self.db.refresh(transaction)

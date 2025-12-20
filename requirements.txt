@@ -14,3 +14,6 @@ Pillow==10.4.0
 httpx==0.27.0
 pydantic[email]
 
+joblib==1.4.2
+scikit-learn==1.5.2
+xgboost==2.0.3

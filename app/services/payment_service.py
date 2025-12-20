@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import (
+from app.models import (
     Payment,
     PaymentStatus,
     Loan,

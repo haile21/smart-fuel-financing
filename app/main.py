@@ -10,24 +10,14 @@ from .routers import (
     users,
     drivers,
     stations,
-    agents,
-    merchants,
+
     loans_transactions,
     credit_scoring,
     bank_integration,
     admin,
+    admin,
     reports,
-    # Legacy routes (kept for backward compatibility)
-    kyc,
-    credit,
-    loan,
-    transactions,
-    station,
-    notification,
-    payment,
-    customer,
-    bank_portal,
-    customer_requests,
+    banks,
 )
 
 
@@ -54,7 +44,8 @@ def create_app() -> FastAPI:
 
     # Configure CORS
     # Parse CORS origins from environment variable (comma-separated list, or "*" for all)
-    cors_origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
+    #cors_origins = settings.cors_origins.split(",") if settings.cors_origins != "*" else ["*"]
+    cors_origins = ["*"]
     cors_origins = [origin.strip() for origin in cors_origins]
     
     app.add_middleware(
@@ -89,26 +80,14 @@ def create_app() -> FastAPI:
     app.include_router(users.router, prefix="", tags=["users"])
     app.include_router(drivers.router, prefix="/drivers", tags=["drivers"])
     app.include_router(stations.router, prefix="/stations", tags=["stations"])
-    app.include_router(agents.router, prefix="", tags=["agents"])
-    app.include_router(merchants.router, prefix="", tags=["merchants"])
+
     app.include_router(loans_transactions.router, prefix="", tags=["loans-transactions"])
     app.include_router(credit_scoring.router, prefix="", tags=["credit-scoring"])
     app.include_router(bank_integration.router, prefix="", tags=["bank-integration"])
     app.include_router(admin.router, prefix="", tags=["admin"])
     app.include_router(reports.router, prefix="", tags=["reports"])
+    app.include_router(banks.router, prefix="/banks", tags=["banks"])
     
-    # Legacy routes (kept for backward compatibility)
-    app.include_router(kyc.router, prefix="/kyc", tags=["kyc"])
-    app.include_router(credit.router, prefix="/credit", tags=["credit"])
-    app.include_router(loan.router, prefix="/loans", tags=["loans"])
-    app.include_router(transactions.router, prefix="/transactions", tags=["transactions"])
-    app.include_router(station.router, prefix="/stations", tags=["stations"])
-    app.include_router(notification.router, prefix="/notifications", tags=["notifications"])
-    app.include_router(payment.router, prefix="/payments", tags=["payments"])
-    app.include_router(customer.router, prefix="/customer", tags=["customer"])
-    app.include_router(bank_portal.router, prefix="/bank-portal", tags=["bank-portal"])
-    app.include_router(customer_requests.router, prefix="/customer", tags=["customer"])
-
     return app
 
 

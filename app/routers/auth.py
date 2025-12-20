@@ -13,7 +13,7 @@ from app.schemas.auth import (
     VerifyOtpRequest,
     VerifyOtpResponse,
 )
-from app.models.entities import UserRole
+from app.models import UserRole
 
 router = APIRouter()
 

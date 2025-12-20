@@ -9,7 +9,7 @@ import uuid
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from app.models.entities import User, UserRole, Driver, Bank, Merchant
+from app.models import User, UserRole, Driver, Bank
 from app.core.security import get_password_hash, verify_password
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -34,7 +34,7 @@ class UserService:
         full_name: Optional[str] = None,
         driver_id: Optional[int] = None,
         bank_id: Optional[int] = None,
-        merchant_id: Optional[int] = None,
+        station_id: Optional[int] = None,
         created_by_user_id: Optional[int] = None,
     ) -> User:
         """
@@ -48,7 +48,7 @@ class UserService:
                 driver = self.db.get(Driver, driver_id)
                 if not driver:
                     raise ValueError("Driver not found")
-        elif role == UserRole.BANK_ADMIN:
+        elif role == UserRole.BANKER:
             if not email and not username:
                 raise ValueError("Bank admin must have email or username")
             if bank_id:
@@ -89,7 +89,7 @@ class UserService:
             role=role.value,
             driver_id=driver_id,
             bank_id=bank_id,
-            merchant_id=merchant_id,
+            station_id=station_id,
             created_by_user_id=created_by_user_id,
             is_active=True,
             is_verified=False,  # Requires verification

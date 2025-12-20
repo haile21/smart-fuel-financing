@@ -11,10 +11,10 @@ from app.db.session import get_db
 from app.services.driver_service import DriverService
 from app.services.station_service import StationService
 from app.services.loan_service import LoanService
-from app.core.security import require_super_admin, require_bank_admin, require_agent, get_current_user
+from app.core.security import require_super_admin, require_bank_admin, get_current_user
 from app.schemas.driver import DriverOnboardRequest
 from app.schemas.station import CreateStationRequest
-from app.models.entities import User
+from app.models import User
 
 router = APIRouter()
 
@@ -32,14 +32,10 @@ def get_bank_loans(
     Get all loans for a bank.
     """
     trace_id = getattr(request.state, "trace_id", "")
-    from app.models.entities import Loan, CreditLine
+    from app.models import Loan
     
-    # Get all credit lines for this bank
-    credit_lines = db.query(CreditLine).filter(CreditLine.bank_id == bank_id).all()
-    credit_line_ids = [cl.id for cl in credit_lines]
-    
-    # Get loans for these credit lines
-    query = db.query(Loan).filter(Loan.credit_line_id.in_(credit_line_ids))
+    # Get loans for this bank
+    query = db.query(Loan).filter(Loan.bank_id == bank_id)
     
     if status:
         query = query.filter(Loan.status == status)
@@ -76,18 +72,18 @@ def get_kifiya_overview(
     Get system overview (Kifiya = platform name).
     """
     trace_id = getattr(request.state, "trace_id", "")
-    from app.models.entities import Driver, Loan, Transaction, CreditLine, CreditLineRequest
+    from app.models import Driver, Loan, Transaction
     
     total_drivers = db.query(Driver).count()
     total_loans = db.query(Loan).count()
     active_loans = db.query(Loan).filter(Loan.status == "ACTIVE").count()
     total_transactions = db.query(Transaction).count()
-    pending_requests = db.query(CreditLineRequest).filter(CreditLineRequest.status == "PENDING").count()
+    # pending_requests = db.query(CreditLineRequest).filter(CreditLineRequest.status == "PENDING").count()
     
     # Calculate total credit extended
-    credit_lines = db.query(CreditLine).all()
-    total_credit_limit = sum(float(cl.credit_limit) for cl in credit_lines)
-    total_utilized = sum(float(cl.utilized_amount) for cl in credit_lines)
+    # credit_lines = db.query(CreditLine).all()
+    # total_credit_limit = sum(float(cl.credit_limit) for cl in credit_lines)
+    # total_utilized = sum(float(cl.utilized_amount) for cl in credit_lines)
     
     return {
         "trace_id": trace_id,
@@ -96,24 +92,24 @@ def get_kifiya_overview(
             "total_loans": total_loans,
             "active_loans": active_loans,
             "total_transactions": total_transactions,
-            "pending_credit_requests": pending_requests,
-            "total_credit_extended": total_credit_limit,
-            "total_credit_utilized": total_utilized,
-            "total_credit_available": total_credit_limit - total_utilized,
+            "pending_credit_requests": 0, # pending_requests,
+            "total_credit_extended": 0, # total_credit_limit,
+            "total_credit_utilized": 0, # total_utilized,
+            "total_credit_available": 0, # total_credit_limit - total_utilized,
         },
     }
 
 
-@router.post("/admin/agent/onboard-driver")
-def onboard_driver_agent(
+@router.post("/admin/onboard-driver")
+def onboard_driver(
     payload: DriverOnboardRequest,
     request: Request,
     current_user: User = Depends(require_super_admin),  # Super admin only
     db: Session = Depends(get_db),
 ):
     """
-    POST /admin/agent/onboard-driver
-    Agent (admin) onboards a driver.
+    POST /admin/onboard-driver
+    Admin onboards a driver.
     """
     trace_id = getattr(request.state, "trace_id", "")
     service = DriverService(db)
@@ -146,29 +142,29 @@ def onboard_driver_agent(
     }
 
 
-@router.post("/admin/agent/onboard-station")
-def onboard_station_agent(
+@router.post("/admin/onboard-station")
+def onboard_station(
     payload: CreateStationRequest,
     request: Request,
-    current_user: User = Depends(require_agent),  # Agent or Super admin
+    current_user: User = Depends(require_super_admin),  # Super admin only
     db: Session = Depends(get_db),
 ):
     """
-    POST /admin/agent/onboard-station
-    Agent (admin) onboards a fuel station.
+    POST /admin/onboard-station
+    Admin onboards a fuel station.
     """
     trace_id = getattr(request.state, "trace_id", "")
     service = StationService(db)
     
     try:
         station = service.create_station(
-            merchant_id=payload.merchant_id,
             name=payload.name,
+            bank_account_number=payload.bank_account_number,
+            bank_routing_number=payload.bank_routing_number,
             address=payload.address,
             latitude=payload.latitude,
             longitude=payload.longitude,
-            fuel_types=payload.fuel_types,
-            current_price_per_liter=payload.current_price_per_liter,
+            fuel_configs=[f.dict() for f in payload.fuel_types] if payload.fuel_types else None,
         )
     except ValueError as e:
         raise HTTPException(

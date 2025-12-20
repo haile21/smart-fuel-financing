@@ -7,11 +7,10 @@ from typing import Optional, List
 
 from sqlalchemy.orm import Session
 
-from app.models.entities import (
+from app.models import (
     Loan,
     LoanRepayment,
     LoanStatus,
-    CreditLine,
     Transaction,
 )
 
@@ -27,7 +26,7 @@ class LoanService:
     def create_loan_from_transaction(
         self,
         transaction_id: int,
-        credit_line_id: int,
+        bank_id: int,
     ) -> Loan:
         """
         Create a loan record from a settled transaction.
@@ -36,14 +35,11 @@ class LoanService:
         if not transaction or not transaction.settled_amount:
             raise ValueError("Transaction not found or not settled")
         
-        credit_line = self.db.get(CreditLine, credit_line_id)
-        if not credit_line:
-            raise ValueError("Credit line not found")
-        
-        # Check if loan already exists for this transaction
+        # Check if loan already exists for this transaction (by bank and driver)
         existing = (
             self.db.query(Loan)
-            .filter(Loan.credit_line_id == credit_line_id)
+            .filter(Loan.bank_id == bank_id)
+            .filter(Loan.driver_id == transaction.debtor_driver_id)
             .filter(Loan.status == LoanStatus.ACTIVE.value)
             .first()
         )
@@ -58,11 +54,11 @@ class LoanService:
         
         # Create new loan
         loan = Loan(
-            credit_line_id=credit_line_id,
+            bank_id=bank_id,
             driver_id=transaction.debtor_driver_id,
             principal_amount=transaction.settled_amount,
             outstanding_balance=transaction.settled_amount,
-            interest_rate=0.0,  # Can be configured per credit line
+            interest_rate=0.0,
             status=LoanStatus.ACTIVE.value,
             due_date=datetime.utcnow() + timedelta(days=30),  # Default 30 days
         )
@@ -98,11 +94,6 @@ class LoanService:
         
         # Update loan balance
         loan.outstanding_balance -= amount
-        
-        # Update credit line utilized amount
-        credit_line = self.db.get(CreditLine, loan.credit_line_id)
-        if credit_line:
-            credit_line.utilized_amount = max(0.0, credit_line.utilized_amount - amount)
         
         # Check if loan is paid off
         if loan.outstanding_balance <= 0:

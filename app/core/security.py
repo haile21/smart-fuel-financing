@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 import uuid
 
 from app.core.config import settings
-from app.models.entities import User, UserRole
+from app.models import User, UserRole
 from app.db.session import get_db
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -149,24 +149,8 @@ def require_driver(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def require_agent(current_user: User = Depends(get_current_user)) -> User:
-    """Require AGENT role."""
-    user_role = UserRole(current_user.role)
-    if user_role not in [UserRole.AGENT, UserRole.SUPER_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Agent access required",
-        )
-    return current_user
 
 
-def require_merchant(current_user: User = Depends(get_current_user)) -> User:
-    """Require MERCHANT role."""
-    user_role = UserRole(current_user.role)
-    if user_role not in [UserRole.MERCHANT, UserRole.SUPER_ADMIN]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Merchant access required",
-        )
-    return current_user
+
+
 
